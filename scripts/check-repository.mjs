@@ -8,7 +8,7 @@ const files = [...new Set(execFileSync('git', ['ls-files', '-z', '--cached', '--
 let localEnv = {}
 try {localEnv = parseEnv(readFileSync('.env.local', 'utf8'))} catch (error) {if (error.code !== 'ENOENT') throw error}
 const privateValues = Object.entries(localEnv)
-  .filter(([name,value]) => /(?:PASSWORD|TOKEN|API_KEY|SECRET|PRIVATE_KEY|SERVICE_ROLE_KEY|PUBLISHABLE_KEY|ANON_KEY|SUPABASE_URL)$/.test(name) && value.length >= 8)
+  .filter(([name,value]) => /(?:PASSWORD|TOKEN|API_KEY|SECRET|SECRET_KEY|PRIVATE_KEY|SERVICE_ROLE_KEY|PUBLISHABLE_KEY|ANON_KEY|SUPABASE_URL)$/.test(name) && value.length >= 8)
   .map(([,value]) => Buffer.from(value))
 const patterns = [
   ['private key', /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],

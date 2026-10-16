@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "test:content": "node --test scripts/content-workflows.test.mjs",
     "check:content": "node --env-file-if-exists=.env.local scripts/check-content-setup.mjs",
-    "test:contact": "node --test scripts/contact-workflows.test.mjs",
+    "test:contact": "node --test scripts/contact-workflows.test.mjs scripts/contact-turnstile.test.mjs",
     "check:contact": "node --env-file-if-exists=.env.local scripts/check-contact.mjs",
     "test:privacy": "node --test scripts/privacy-workflows.test.mjs",
     "test:browser": "playwright test",

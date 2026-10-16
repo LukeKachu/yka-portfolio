@@ -41,6 +41,8 @@ Official references: [test-domain limits](https://resend.com/docs/knowledge-base
 
 ## Security / maintenance
 
+- Optional Cloudflare Turnstile is configured separately using the runtime variables `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`. See [Turnstile setup](turnstile-setup.md). Both configured keys enforce server-side verification before database writes or email delivery; partial setup fails closed. Leaving both absent preserves the existing working setup during installation. The secret never reaches the browser.
+
 - Server-side validation, bounded 32 KiB request bodies, same-origin checks, honeypot and minimum completion time.
 - Persistent database rate limits: three new submissions per request fingerprint/hour, ten per email/day. Failed email retries do not consume another database submission. Forwarded IP headers must be overwritten by the trusted deployment proxy; do not trust arbitrary client-supplied headers on a custom host.
 - Contact data remains behind the existing admin-only RLS policies. This migration adds no anonymous read policy and does not disable RLS.

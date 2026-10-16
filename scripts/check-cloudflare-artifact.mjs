@@ -9,7 +9,7 @@ if (!existsSync(join(root,'worker.js'))) throw new Error('Build the Cloudflare W
 let localEnv = {}
 try {localEnv = parseEnv(readFileSync('.env.local','utf8'))} catch (error) {if (error.code !== 'ENOENT') throw error}
 const privateValues = Object.entries({...localEnv,...process.env})
-  .filter(([name,value]) => !name.startsWith('NEXT_PUBLIC_') && /(?:PASSWORD|TOKEN|API_KEY|SECRET|PRIVATE_KEY|SERVICE_ROLE_KEY)$/.test(name) && value?.length >= 8)
+  .filter(([name,value]) => !name.startsWith('NEXT_PUBLIC_') && /(?:PASSWORD|TOKEN|API_KEY|SECRET|SECRET_KEY|PRIVATE_KEY|SERVICE_ROLE_KEY)$/.test(name) && value?.length >= 8)
   .map(([,value]) => Buffer.from(value))
 const issues = []
 function inspect(directory) {

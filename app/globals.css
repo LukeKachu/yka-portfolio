@@ -262,6 +262,11 @@ html[data-theme="dark"] .theme-icon-dark {display:inline}
 .contact-field small {font-size:10px;line-height:1.5;color:var(--muted)}
 .contact-field .contact-field-error {color:var(--accent);font-size:12px;line-height:1.6}
 .contact-field [aria-invalid="true"] {border-color:var(--accent)}
+.contact-captcha {display:grid;gap:10px;padding:18px 0;border-top:1px solid var(--border);min-width:0}
+.contact-captcha>span {font-size:11px;font-weight:500}
+.contact-captcha-widget {width:100%;min-width:0;min-height:65px}
+.contact-captcha>p {margin:0;font-size:11px;color:var(--muted);line-height:1.6}
+.contact-captcha>.section-link {justify-self:start}
 .contact-field input::placeholder,.contact-field textarea::placeholder {color:var(--muted)}
 .contact-field textarea {min-height:120px;resize:vertical;line-height:1.7}
 .contact-form-footer {display:grid;grid-template-columns:1fr auto;align-items:center;gap:24px}

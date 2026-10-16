@@ -5,6 +5,7 @@ import {getSettings} from '@/lib/data/public'
 import {ContactForm} from '@/components/public/contact-form'
 import {contactEmailConfigured} from '@/lib/contact/handler'
 import {localizedPageMetadata} from '@/lib/seo/metadata'
+import {turnstileConfiguration} from '@/lib/contact/turnstile'
 
 export async function generateMetadata({params}:{params:Promise<{locale:string}>}) {
   const {locale}=await params
@@ -18,7 +19,10 @@ export default async function ContactPage({params}:{params:Promise<{locale:strin
   const settings = await getSettings()
   const tr = locale === 'tr'
   const email = 'yusufkerimaltay77@gmail.com'
-  const deliveryAvailable = contactEmailConfigured({apiKey:process.env.RESEND_API_KEY,from:process.env.CONTACT_FROM_EMAIL})
+  const protection=turnstileConfiguration({siteKey:process.env.TURNSTILE_SITE_KEY,secretKey:process.env.TURNSTILE_SECRET_KEY})
+  const deliveryAvailable = contactEmailConfigured({apiKey:process.env.RESEND_API_KEY,from:process.env.CONTACT_FROM_EMAIL})&&protection!=='incomplete'
+  // Only the public widget key crosses the Server/Client boundary, never the secret.
+  const turnstileSiteKey=protection==='required'?process.env.TURNSTILE_SITE_KEY?.trim():undefined
   return <main className="contact-page">
     <header className="contact-page-heading">
       <p className="eyebrow"><span className="status-dot"/>{tr ? 'Yeni fikirlere, iyi iş birliklerine.' : 'New ideas. Thoughtful collaborations.'}</p>
@@ -31,7 +35,7 @@ export default async function ContactPage({params}:{params:Promise<{locale:strin
         <div className="contact-disciplines"><p className="eyebrow">{tr ? 'Birlikte neler yapabiliriz?' : 'What can we work on?'}</p><ul><li><span>01</span>{tr ? 'İçerik & sosyal medya' : 'Content & social media'}</li><li><span>02</span>{tr ? 'Dijital pazarlama' : 'Digital marketing'}</li><li><span>03</span>{tr ? 'Web & dijital deneyimler' : 'Web & digital experiences'}</li></ul></div>
         <div className="contact-meta"><span>{settings?.location ? String(settings.location) : 'İstanbul, Türkiye'}</span>{settings?.linkedin_url ? <a href={String(settings.linkedin_url)} target="_blank" rel="noopener noreferrer">LinkedIn <ArrowIcon direction="up-right"/></a> : null}</div>
       </div>
-      <ContactForm locale={locale} email={email} deliveryAvailable={deliveryAvailable}/>
+      <ContactForm locale={locale} email={email} deliveryAvailable={deliveryAvailable} turnstileSiteKey={turnstileSiteKey}/>
     </section>
   </main>
 }

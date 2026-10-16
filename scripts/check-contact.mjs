@@ -1,9 +1,13 @@
 import {createClient} from '@supabase/supabase-js'
 import {contactEmailConfigured} from '../lib/contact/handler.ts'
+import {turnstileConfiguration} from '../lib/contact/turnstile.ts'
 
 // Read-only preflight. Never prints configuration values or sends an email.
 const config = {apiKey:process.env.RESEND_API_KEY,from:process.env.CONTACT_FROM_EMAIL}
 let ready = true
+const protection=turnstileConfiguration({siteKey:process.env.TURNSTILE_SITE_KEY,secretKey:process.env.TURNSTILE_SECRET_KEY})
+console.log(`Turnstile protection: ${protection==='required'?'CONFIGURED (server verification required; live challenge not tested)':protection==='incomplete'?'INCOMPLETE (both runtime keys are required)':'NOT ENABLED (existing anti-spam checks remain)'}`)
+if(protection==='incomplete')ready=false
 for (const [name,present] of [['RESEND_API_KEY',Boolean(config.apiKey?.trim())],['CONTACT_FROM_EMAIL',Boolean(config.from?.trim())]]) {
   console.log(`${name}: ${present ? 'configured (value hidden)' : 'MISSING'}`)
 }

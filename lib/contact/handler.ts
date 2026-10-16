@@ -1,11 +1,12 @@
 import {createHash} from 'node:crypto'
 import {z} from 'zod'
 import {contactSchema,contactErrorFields,type ContactField} from './schema.ts'
+import {turnstileConfiguration,verifyTurnstile} from './turnstile.ts'
 export {contactSchema} from './schema.ts'
 
-type Config = {apiKey?:string; from?:string; siteUrl?:string}
+type Config = {apiKey?:string; from?:string; siteUrl?:string;turnstileSiteKey?:string;turnstileSecretKey?:string}
 type RpcResult = {data:unknown; error:{message:string}|null}
-type Dependencies = {config:Config; save:(args:Record<string,string|null>)=>PromiseLike<RpcResult>; send?:typeof fetch}
+type Dependencies = {config:Config; save:(args:Record<string,string|null>)=>PromiseLike<RpcResult>; send?:typeof fetch;verify?:typeof fetch}
 
 export function contactEmailConfigured(config:Config) {
   const from = config.from?.trim() || ''
@@ -37,7 +38,7 @@ async function boundedForm(request:Request) {
 const escapeHtml = (value:string) => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!))
 
 // The route injects server-only configuration. Neither credentials nor provider errors are returned to the browser.
-export async function handleContact(request:Request, {config,save,send=fetch}:Dependencies) {
+export async function handleContact(request:Request, {config,save,send=fetch,verify=fetch}:Dependencies) {
   const origin = request.headers.get('origin')
   const allowedOrigins = [new URL(request.url).origin]
   if (config.siteUrl) {try {allowedOrigins.push(new URL(config.siteUrl).origin)} catch {/* Ignore an invalid optional site URL. */}}
@@ -55,6 +56,14 @@ export async function handleContact(request:Request, {config,save,send=fetch}:De
   const elapsed = Date.now() - data.startedAt
   if (elapsed < 2500 || elapsed > 86400000) return reply('too_fast',400)
   if (!contactEmailConfigured(config)) return reply('unavailable',503)
+  const protection=turnstileConfiguration({siteKey:config.turnstileSiteKey,secretKey:config.turnstileSecretKey})
+  if (protection==='incomplete') return reply('unavailable',503)
+  if (protection==='required') {
+    const tokens=form.getAll('cf-turnstile-response')
+    if (tokens.length!==1||typeof tokens[0]!=='string'||!tokens[0]||tokens[0].length>2048) return reply('captcha_required',400)
+    const verdict=await verifyTurnstile(config.turnstileSecretKey!,tokens[0],new URL(origin!).hostname,verify)
+    if (verdict!=='valid') return reply(verdict==='unavailable'?'captcha_unavailable':'captcha_failed',verdict==='unavailable'?503:400)
+  }
 
   // Cloudflare supplies this verified client address; prefer it to a forwarded chain.
   const ip = request.headers.get('cf-connecting-ip')?.trim() || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
