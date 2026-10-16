@@ -176,7 +176,10 @@ test('social preview covers are local, lightweight real images, not blank placeh
   }
   assert.equal(publicationPoster('x:2105692271408742418'),undefined)
   const xEmbed = await readFile(new URL('../components/public/x-embed.tsx',import.meta.url),'utf8')
-  assert.doesNotMatch(xEmbed,/VideoPreview|poster|setOpened|widgets\.js/)
+  // A supplied site-hosted cover is optional; X never requires a manual cover registry.
+  assert.doesNotMatch(xEmbed,/VideoPreview|setOpened|widgets\.js|publicationPoster/)
+  assert.match(xEmbed,/poster\?:string/)
+  assert.match(xEmbed,/onPlay=\{play\}/)
   assert.match(xEmbed,/platform\.twitter\.com\/embed\/Tweet\.html/)
   const home = await readFile(new URL('../app/[locale]/page.tsx',import.meta.url),'utf8')
   assert.ok(home.indexOf('<PortfolioReach') > home.indexOf('id="selected-work"'))

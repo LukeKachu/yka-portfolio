@@ -17,7 +17,7 @@ export const copy = {
     intro: '',
     downloadResume: 'Özgeçmişi İndir', selectedWork: 'Seçili Çalışmalar', selectedExperience: 'Seçili Deneyim', capabilities: 'Yetkinlikler',
     shortAbout: 'Hakkımda', contactCta: 'Birlikte çalışalım', noContent: 'Henüz yayınlanmış içerik yok.', viewProject: 'Projeyi Gör',
-    watchYoutube: 'YouTube’da İzle ↗', watchInstagram: 'Instagram’da İzle ↗', watchTiktok: 'TikTok’ta İzle ↗', visitWebsite: 'Web Sitesini Ziyaret Et ↗', present: 'Günümüz',
+    watchYoutube: 'YouTube’da İzle', watchInstagram: 'Instagram’da İzle', watchTiktok: 'TikTok’ta İzle', visitWebsite: 'Web Sitesini Ziyaret Et', present: 'Günümüz',
   },
   en: {
     localeName: 'English',
@@ -30,6 +30,6 @@ export const copy = {
     intro: '',
     downloadResume: 'Download Resume', selectedWork: 'Selected Work', selectedExperience: 'Selected Experience', capabilities: 'Capabilities',
     shortAbout: 'About', contactCta: 'Let’s work together', noContent: 'No published content yet.', viewProject: 'View Project',
-    watchYoutube: 'Watch on YouTube ↗', watchInstagram: 'Watch on Instagram ↗', watchTiktok: 'Watch on TikTok ↗', visitWebsite: 'Visit Website ↗', present: 'Present',
+    watchYoutube: 'Watch on YouTube', watchInstagram: 'Watch on Instagram', watchTiktok: 'Watch on TikTok', visitWebsite: 'Visit Website', present: 'Present',
   },
 } satisfies Record<Locale, Record<string, string>>

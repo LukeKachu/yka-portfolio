@@ -1,4 +1,5 @@
 'use client'
+import {ArrowIcon} from '@/components/public/arrow-icon'
 
 import {useRef, useState, type FormEvent} from 'react'
 import Link from 'next/link'
@@ -61,16 +62,16 @@ export function ContactForm({locale, email, deliveryAvailable}: {locale:'tr'|'en
   }
 
   if (status === 'sent') return <section className="contact-form contact-success" aria-live="polite">
-    <span className="contact-success-mark" aria-hidden="true">↗</span>
+    <span className="contact-success-mark" aria-hidden="true"><ArrowIcon direction="up-right"/></span>
     <p className="eyebrow">YKA / {tr ? 'Mesaj alındı' : 'Message received'}</p>
     <h2>{labels.sent}</h2><p>{labels.thanks}</p>
-    <button className="section-link" onClick={() => {startedAt.current = 0; submission.current = {payload:'', id:''}; setStatus('idle')}}>{labels.another} <span aria-hidden="true">↗</span></button>
+    <button className="section-link" onClick={() => {startedAt.current = 0; submission.current = {payload:'', id:''}; setStatus('idle')}}>{labels.another} <span aria-hidden="true"><ArrowIcon direction="up-right"/></span></button>
   </section>
 
   const errorText = errorCode === 'rate_limited' ? labels.rate : errorCode === 'too_fast' ? labels.fast : errorCode === 'invalid' ? labels.invalid : labels.error
   return <form className="contact-form" onSubmit={submit} onFocus={() => {if (!startedAt.current) startedAt.current = Date.now()}} aria-busy={status === 'sending'}>
     <div className="contact-form-heading"><span>{labels.kicker}</span><h2>{labels.title}</h2><p>{labels.required}</p></div>
-    {!deliveryAvailable ? <p className="contact-availability" role="status">{labels.unavailable} <a href={`mailto:${email}`}>{labels.mail} ↗</a></p> : null}
+    {!deliveryAvailable ? <p className="contact-availability" role="status">{labels.unavailable} <a href={`mailto:${email}`}>{labels.mail} <ArrowIcon direction="up-right"/></a></p> : null}
     <label className="contact-honeypot" aria-hidden="true">Company website<input name="website" tabIndex={-1} autoComplete="off"/></label>
     <fieldset className="contact-fields" disabled={status === 'sending'}>
       <legend className="contact-honeypot">{tr ? 'İletişim bilgileri ve mesaj' : 'Contact details and message'}</legend>
@@ -84,7 +85,7 @@ export function ContactForm({locale, email, deliveryAvailable}: {locale:'tr'|'en
       </div>
       <label className="contact-field"><span>{labels.message}</span><textarea name="message" minLength={20} maxLength={4000} required rows={4} placeholder={labels.messageHint}/></label>
     </fieldset>
-    <div className="contact-form-footer"><p>{labels.privacy} <Link href={`/${locale}/privacy`}>{tr ? 'KVKK aydınlatma metni' : 'Privacy notice'}</Link>. {tr ? 'Bu form pazarlama izni değildir.' : 'This form is not marketing consent.'}</p><button className="contact-submit" disabled={!deliveryAvailable || status === 'sending'}>{status === 'sending' ? labels.sending : labels.send}<span aria-hidden="true">↗</span></button></div>
-    <div aria-live="polite" aria-atomic="true">{status === 'error' ? <p className="contact-error" role="alert">{errorText} <a href={`mailto:${email}`}>{labels.mail} ↗</a></p> : null}</div>
+    <div className="contact-form-footer"><p>{labels.privacy} <Link href={`/${locale}/privacy`}>{tr ? 'KVKK aydınlatma metni' : 'Privacy notice'}</Link>. {tr ? 'Bu form pazarlama izni değildir.' : 'This form is not marketing consent.'}</p><button className="contact-submit" disabled={!deliveryAvailable || status === 'sending'}>{status === 'sending' ? labels.sending : labels.send}<span aria-hidden="true"><ArrowIcon direction="up-right"/></span></button></div>
+    <div aria-live="polite" aria-atomic="true">{status === 'error' ? <p className="contact-error" role="alert">{errorText} <a href={`mailto:${email}`}>{labels.mail} <ArrowIcon direction="up-right"/></a></p> : null}</div>
   </form>
 }

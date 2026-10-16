@@ -3,6 +3,16 @@ import test from 'node:test'
 import {readFile} from 'node:fs/promises'
 import {CONSENT_MAX_AGE,CONSENT_VERSION,localPoster,makeConsent,parseConsent} from '../lib/privacy/consent.ts'
 import {notices} from '../lib/privacy/notices.ts'
+import {localizedPageMetadata} from '../lib/seo/metadata.ts'
+
+test('canonical, language alternates and Open Graph URLs identify the current route, not its parent', () => {
+  for (const locale of ['tr','en']) for (const path of ['work','resume','contact','work/project-example']) {
+    const meta = localizedPageMetadata(locale,path,'Page title','Page description')
+    assert.equal(meta.alternates.canonical,`/${locale}/${path}`)
+    assert.deepEqual(meta.alternates.languages,{tr:`/tr/${path}`,en:`/en/${path}`,'x-default':`/en/${path}`})
+    assert.equal(meta.openGraph.url,`/${locale}/${path}`)
+  }
+})
 
 test('consent defaults fail closed and accepts only explicit versioned boolean choices', () => {
   const now = Date.now()
@@ -35,16 +45,23 @@ test('all legal notices are bilingual and match real providers without fictitiou
   }
 })
 
-test('every external media render path passes consent; contact notice is not forced marketing consent', async () => {
+test('external players need group consent or a scoped play click; contact is not marketing consent', async () => {
   const player = await readFile(new URL('../components/public/video-player.tsx',import.meta.url),'utf8')
   const x = await readFile(new URL('../components/public/x-embed.tsx',import.meta.url),'utf8')
   const media = await readFile(new URL('../components/public/media-embed.tsx',import.meta.url),'utf8')
   const form = await readFile(new URL('../components/public/contact-form.tsx',import.meta.url),'utf8')
   for (const source of [player,x]) {
-    assert.ok(source.indexOf('if (!consent?.externalMedia)') < source.indexOf('<iframe'))
+    assert.ok(source.indexOf('if (!enabled)') < source.indexOf('<iframe'))
+    assert.match(source,/useMediaAccess/)
+    assert.match(source,/onPlay=/)
     assert.match(source,/MediaConsentPlaceholder/)
   }
   assert.doesNotMatch(media,/<iframe/)
+  const preview = await readFile(new URL('../components/public/media-consent-placeholder.tsx',import.meta.url),'utf8')
+  const access = await readFile(new URL('../components/public/use-media-access.ts',import.meta.url),'utf8')
+  assert.doesNotMatch(preview,/openSettings|useConsent|youtube-nocookie\.com|ytimg\.com/)
+  assert.match(preview,/aria-describedby/)
+  assert.doesNotMatch(access,/document\.cookie\s*=|localStorage\.setItem/)
   assert.match(form,/KVKK aydınlatma metni/)
   assert.doesNotMatch(form,/name="(?:marketing|consent)"[^>]*required/)
 })

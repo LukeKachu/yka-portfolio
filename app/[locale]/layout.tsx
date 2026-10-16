@@ -1,3 +1,4 @@
+import {ArrowIcon} from '@/components/public/arrow-icon'
 import Link from 'next/link'
 import {notFound} from 'next/navigation'
 import type {ReactNode} from 'react'
@@ -36,7 +37,7 @@ export default async function LocaleLayout({children, params}: {children: ReactN
       </header>
       {dataStatus === 'offline' ? <div className="content-notice" role="status">{locale === 'tr' ? 'İçerik bağlantısı şu anda kurulamıyor. Çalışmalar ve deneyim bilgileri bağlantı yeniden sağlandığında görünecek.' : 'The content connection is temporarily unavailable. Work and experience will appear when the connection is restored.'}</div> : null}
       <div id="main-content" tabIndex={-1}>{children}</div>
-      <footer className="site-footer"><Link href={`/${locale}`} className="footer-brand">YKA<span>.</span></Link><span>© {new Date().getFullYear()} Yusuf Kerim Altay</span>{resumeUrl ? <a href={resumeUrl} target="_blank" rel="noreferrer">{text.downloadResume} ↗</a> : <span>İstanbul · Türkiye</span>}<nav className="legal-footer" aria-label={locale === 'tr' ? 'Gizlilik ve site bilgileri' : 'Privacy and site information'}><Link href={`/${locale}/privacy`}>{locale === 'tr' ? 'Gizlilik / KVKK' : 'Privacy'}</Link><Link href={`/${locale}/cookies`}>{locale === 'tr' ? 'Çerez politikası' : 'Cookies'}</Link><Link href={`/${locale}/terms`}>{locale === 'tr' ? 'Kullanım bilgileri' : 'Site terms'}</Link><CookieSettingsButton locale={locale}/></nav></footer>
+      <footer className="site-footer"><Link href={`/${locale}`} className="footer-brand">YKA<span>.</span></Link><span>© {new Date().getFullYear()} Yusuf Kerim Altay</span>{resumeUrl ? <a href={resumeUrl} target="_blank" rel="noreferrer">{text.downloadResume} <ArrowIcon direction="up-right"/></a> : <span>İstanbul · Türkiye</span>}<nav className="legal-footer" aria-label={locale === 'tr' ? 'Gizlilik ve site bilgileri' : 'Privacy and site information'}><Link href={`/${locale}/privacy`}>{locale === 'tr' ? 'Gizlilik / KVKK' : 'Privacy'}</Link><Link href={`/${locale}/cookies`}>{locale === 'tr' ? 'Çerez politikası' : 'Cookies'}</Link><Link href={`/${locale}/terms`}>{locale === 'tr' ? 'Kullanım bilgileri' : 'Site terms'}</Link><CookieSettingsButton locale={locale}/></nav></footer>
     </div></CookieConsentProvider>
   )
 }

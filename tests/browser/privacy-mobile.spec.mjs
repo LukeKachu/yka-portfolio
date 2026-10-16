@@ -77,7 +77,7 @@ for (const width of [320,375,390,430,768,1280]) {
       const size = await page.evaluate(() => ({scroll:document.documentElement.scrollWidth,viewport:innerWidth}))
       expect(size.scroll,`${path} overflows at ${width}px`).toBeLessThanOrEqual(size.viewport)
       if (path === '/tr/work') {
-        const clipped = await page.locator('.media-consent').evaluateAll(cards => cards.map(card => ({height:card.clientHeight,scroll:card.scrollHeight})).filter(card => card.scroll>card.height+2))
+        const clipped = await page.locator('.media-click-preview').evaluateAll(cards => cards.map(card => ({height:card.clientHeight,scroll:card.scrollHeight})).filter(card => card.scroll>card.height+2))
         expect(clipped).toEqual([])
       }
     }
@@ -107,6 +107,55 @@ test('contact mobile/light and desktop/dark render with privacy notice, phone an
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('data-theme','dark')
   await page.screenshot({path:'tmp/privacy-qa/contact-desktop-dark.png',fullPage:true})
+})
+
+test('a disclosed play click opens only that video without settings or persistent group permission',async ({page,context}) => {
+  await context.route(external,route => route.fulfill({status:200,contentType:'text/html',body:'<html><body>Isolated media test</body></html>'}))
+  await page.setViewportSize({width:390,height:844})
+  await page.goto('/tr/work')
+  await page.locator('.media-click-play').first().click()
+  await expect(page.locator(externalFrame)).toHaveCount(1)
+  await expect(page.getByRole('dialog')).not.toBeVisible()
+  expect((await context.cookies()).find(cookie => cookie.name==='yka-consent')).toBeUndefined()
+  await page.reload()
+  await expect(page.locator(externalFrame)).toHaveCount(0)
+  await page.getByRole('button',{name:'İsteğe bağlıları reddet',exact:true}).click()
+  for (const platform of ['Instagram','YouTube','TikTok','X']) {
+    const original = (await context.cookies()).find(cookie => cookie.name==='yka-consent')?.value
+    const card = page.locator('.media-click-preview').filter({has:page.locator('.media-platform',{hasText:new RegExp(`^${platform}$`)})}).first()
+    await expect(card).toBeVisible()
+    const originalCount = await page.locator('.media-click-preview').count()
+    await card.getByRole('button',{name:/Videoyu izle/}).click()
+    await expect(page.locator(externalFrame)).toHaveCount(1)
+    await expect(page.locator('.media-click-preview')).toHaveCount(originalCount-1)
+    await expect(page.getByRole('dialog')).not.toBeVisible()
+    expect((await context.cookies()).find(cookie => cookie.name==='yka-consent')?.value).toBe(original)
+    // A new privacy choice also clears a locally requested player.
+    await page.locator('.legal-footer').getByRole('button',{name:'Çerez tercihleri',exact:true}).click()
+    await page.getByRole('dialog').getByRole('button',{name:'İsteğe bağlıları reddet',exact:true}).click()
+    await expect(page.locator(externalFrame)).toHaveCount(0)
+    await page.reload()
+    await expect(page.locator(externalFrame)).toHaveCount(0)
+  }
+})
+
+test('page canonical/language URLs stay on the same page and all public arrows are SVGs',async ({page}) => {
+  for (const locale of ['tr','en']) {
+    for (const suffix of ['','/work','/resume','/contact']) {
+      await page.goto(`/${locale}${suffix}`)
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href',new RegExp(`/${locale}${suffix}$`))
+      await expect(page.locator('link[rel="alternate"][hreflang="tr"]')).toHaveAttribute('href',new RegExp(`/tr${suffix}$`))
+      await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute('href',new RegExp(`/en${suffix}$`))
+      expect(await page.locator('body').innerText()).not.toMatch(/[↗↘→←↓↑▶▷]/u)
+      expect(await page.locator('svg.arrow-icon').count()).toBeGreaterThan(0)
+    }
+  }
+  await page.goto('/tr/work')
+  const details = page.locator('.project-detail-link').first()
+  const path = await details.getAttribute('href')
+  await details.click()
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href',new RegExp(`${path}$`))
+  await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute('href',new RegExp(`${path.replace('/tr/','/en/')}$`))
 })
 
 test('admin login stays usable on a narrow screen without submitting credentials',async ({page}) => {
