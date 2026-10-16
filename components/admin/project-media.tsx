@@ -1,0 +1,22 @@
+'use client'
+
+import {useRouter} from 'next/navigation'
+import {useRef,useState} from 'react'
+import * as tus from 'tus-js-client'
+import {deleteProjectMedia,registerProjectMedia} from '@/app/admin/actions'
+import {createClient} from '@/lib/supabase/client'
+import {supabaseConfig} from '@/lib/supabase/config'
+
+type Row=Record<string,unknown>
+type Kind='image'|'video'|'screenshot_desktop'|'screenshot_mobile'
+
+export function ProjectMedia({projectId,media}:{projectId:string;media:Row[]}){
+  const router=useRouter();const formRef=useRef<HTMLFormElement>(null);const [progress,setProgress]=useState<number|null>(null);const [error,setError]=useState('');const [uploading,setUploading]=useState(false)
+  async function upload(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setError('');const form=new FormData(event.currentTarget);const file=form.get('file');if(!(file instanceof File)||!file.size)return
+    const kind=String(form.get('kind')) as Kind;if(kind==='video'&&!['video/mp4','video/webm','video/quicktime'].includes(file.type)){setError('Use MP4, WebM or MOV video. MP4 (H.264) is recommended for the web.');return}
+    setUploading(true);const supabase=createClient();const {data:{session}}=await supabase.auth.getSession();if(!session){setError('Your admin session expired. Sign in again.');setUploading(false);return}
+    const projectRef=new URL(supabaseConfig.url!).hostname.split('.')[0];const safe=file.name.toLowerCase().replace(/[^a-z0-9._-]+/g,'-');const storagePath=`projects/${projectId}/gallery/${crypto.randomUUID()}-${safe}`
+    const uploader=new tus.Upload(file,{endpoint:`https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`,retryDelays:[0,3000,5000,10000,20000],headers:{authorization:`Bearer ${session.access_token}`},uploadDataDuringCreation:true,removeFingerprintOnSuccess:true,chunkSize:6*1024*1024,metadata:{bucketName:'portfolio-public',objectName:storagePath,contentType:file.type||'application/octet-stream',cacheControl:'31536000'},onError:(reason)=>{setError(reason.message);setUploading(false)},onProgress:(uploaded,total)=>setProgress(Math.round(uploaded/total*100)),onSuccess:async()=>{try{await registerProjectMedia({projectId,kind,storagePath,altTr:String(form.get('alt_tr')||''),altEn:String(form.get('alt_en')||''),sortOrder:Number(form.get('sort_order')||0)});formRef.current?.reset();setProgress(null);router.refresh()}catch(reason){setError(reason instanceof Error?reason.message:'Media metadata could not be saved.')}finally{setUploading(false)}}});uploader.findPreviousUploads().then(previous=>{if(previous[0])uploader.resumeFromPreviousUpload(previous[0]);uploader.start()})
+  }
+  return <div className="admin-panel"><h2>Gallery & direct video uploads</h2><p>Large files upload directly to Supabase Storage in resumable 6 MB chunks. For fast playback, export video as MP4 / H.264, 1080p, with a web-optimized bitrate before uploading.</p><form ref={formRef} onSubmit={upload} className="admin-form"><div className="admin-form-grid"><label className="admin-field"><span>Type</span><select name="kind"><option value="image">Gallery image</option><option value="video">Direct video</option><option value="screenshot_desktop">Desktop screenshot</option><option value="screenshot_mobile">Mobile screenshot</option></select></label><label className="admin-field"><span>File</span><input name="file" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" required/></label><label className="admin-field"><span>Alt — Turkish</span><input name="alt_tr"/></label><label className="admin-field"><span>Alt — English</span><input name="alt_en"/></label><label className="admin-field"><span>Sort order</span><input name="sort_order" type="number" defaultValue="0"/></label></div><button className="admin-button" disabled={uploading}>{uploading?`Uploading ${progress??0}%`:'Upload media'}</button>{uploading?<div className="upload-progress"><span style={{width:`${progress??0}%`}}/></div>:null}{error?<p className="admin-error">{error}</p>:null}</form><div className="admin-stack">{media.map(item=><form action={deleteProjectMedia} className="admin-list-row" key={String(item.id)}><input type="hidden" name="_id" value={String(item.id)}/><input type="hidden" name="_projectId" value={projectId}/><input type="hidden" name="_path" value={String(item.storage_path)}/><div><strong>{String(item.kind)}</strong><span>{String(item.storage_path)}</span></div><button className="admin-button admin-button-danger">Delete</button></form>)}</div></div>
+}

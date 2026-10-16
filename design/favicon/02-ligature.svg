@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="YKA — Ligature">
+  <rect width="64" height="64" rx="12" fill="#101510"/>
+  <path d="M10 11h8l7 11 7-11h8L29 30v9h-8v-9Z" fill="#b7f34a"/>
+  <path d="M21 30h8v8l13-13h10L35 43l17 13H40L29 47v9h-8Z" fill="#b7f34a"/>
+  <path fill-rule="evenodd" d="m37 56 8-25h7l8 25h-7l-1-4h-7l-1 4Zm9.5-9h4l-2-8Z" fill="#f5f4ef"/>
+  <path d="M46 11h8v4h-8Z" fill="#ef8559"/>
+</svg>

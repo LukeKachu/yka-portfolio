@@ -1,0 +1,61 @@
+{
+  "name": "yusuf-kerim-altay-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "verify:supabase": "node scripts/verify-supabase.mjs",
+    "import:resume": "node --env-file-if-exists=.env.local scripts/import-initial-resume.mjs",
+    "import:portfolio": "node --env-file-if-exists=.env.local scripts/import-initial-portfolio.mjs",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:content": "node --test scripts/content-workflows.test.mjs",
+    "check:content": "node --env-file-if-exists=.env.local scripts/check-content-setup.mjs",
+    "test:contact": "node --test scripts/contact-workflows.test.mjs",
+    "check:contact": "node --env-file-if-exists=.env.local scripts/check-contact.mjs",
+    "test:privacy": "node --test scripts/privacy-workflows.test.mjs",
+    "test:browser": "playwright test",
+    "test:security": "node --test scripts/security-workflows.test.mjs",
+    "check:repository": "node scripts/check-repository.mjs",
+    "build:cloudflare": "opennextjs-cloudflare build",
+    "preview:cloudflare": "opennextjs-cloudflare preview --ip 127.0.0.1 --port 3002",
+    "check:cloudflare": "node scripts/cloudflare-dry-run.mjs",
+    "check:cloudflare-secrets": "node scripts/check-cloudflare-artifact.mjs",
+    "deploy:cloudflare": "npm run check:cloudflare-secrets && opennextjs-cloudflare deploy -- --keep-vars",
+    "preview:favicons": "node scripts/render-favicon-options.mjs",
+    "build:icons": "node scripts/build-icons.mjs",
+    "preview:lan": "node scripts/preview-lan.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
+    "next": "16.4.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "server-only": "^0.0.1",
+    "tus-js-client": "^4.3.1",
+    "unpdf": "^1.9.0",
+    "zod": "^4.5.4"
+  },
+  "overrides": {
+    "@node-minify/core": {
+      "glob": "10.5.0"
+    }
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
+    "@opennextjs/cloudflare": "1.20.12",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.4.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "wrangler": "4.151.1"
+  }
+}

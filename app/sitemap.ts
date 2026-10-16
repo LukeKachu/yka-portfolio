@@ -1,0 +1,3 @@
+import type {MetadataRoute} from 'next'
+import {getProjects} from '@/lib/data/public'
+export default async function sitemap():Promise<MetadataRoute.Sitemap>{const base=(process.env.NEXT_PUBLIC_SITE_URL||'http://localhost:3000').replace(/\/$/,'');const routes=['','/work','/resume','/contact','/privacy','/cookies','/terms'];const projects=await getProjects();return [...(['en','tr'] as const).flatMap(locale=>routes.map(path=>({url:`${base}/${locale}${path}`,lastModified:new Date(),alternates:{languages:{en:`${base}/en${path}`,tr:`${base}/tr${path}`}}}))),...projects.flatMap(project=>(['en','tr'] as const).map(locale=>({url:`${base}/${locale}/work/${project.slug}`,lastModified:new Date(String(project.updated_at||Date.now()))})))]}

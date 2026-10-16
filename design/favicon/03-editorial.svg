@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="YKA — Editorial">
+  <rect width="64" height="64" rx="3" fill="#b7f34a"/>
+  <g fill="#101510">
+    <path d="M8 8h7l5 9 5-9h7L23 23v8h-7v-8Z"/>
+    <path d="M36 8h7v8l7-8h9L48 20l12 11H50l-7-7v7h-7Z"/>
+    <path fill-rule="evenodd" d="m8 56 8-21h10l8 21h-8l-1-4h-8l-1 4Zm11-9h4l-2-6Z"/>
+  </g>
+  <path d="M39 38h17v18H39z" fill="#101510"/>
+  <path d="M39 38h17v5H39z" fill="#cf481e"/>
+</svg>

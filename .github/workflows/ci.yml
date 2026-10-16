@@ -1,0 +1,35 @@
+name: Project checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run check:repository
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test:content
+      - run: npm run test:contact
+      - run: npm run test:privacy
+      - run: npm run test:security
+      - run: npm run build:cloudflare
+      - run: npm run check:cloudflare
+      - run: npm run check:cloudflare-secrets
