@@ -1,6 +1,8 @@
 # Privacy and responsive launch review
 
-Implemented: versioned 180-day first-party consent cookie; optional preferences and external media default off; equal accept/reject options; editable/withdrawable choices; native accessible settings dialog; cross-tab updates. Video cards and site/Supabase-hosted covers remain visible without opening settings. A disclosed “Watch video” click opens only that mounted player, writes no consent cookie, does not unlock other players and resets on reload. Remote social players/thumbnails otherwise remain blocked until group consent, including X and no-cover Instagram. Any subsequent privacy choice clears single-player access, including cross-tab withdrawal. There is no separately installed analytics or advertising pixel. Theme localStorage is used only with preference consent. No fake analytics category or marketing checkbox was added.
+Owner-requested display mode: external players are visible by default, with lazy loading for off-screen cards and autoplay disabled on first load. There is no automatic permission banner. Optional theme storage remains off until an explicit choice; declining theme storage does not hide videos. The footer dialog independently controls saved theme and video visibility. No first-party preference cookie is written merely by visiting. Saved choices use the existing 180-day version-1 record for compatibility, not as proof of media consent. Existing valid explicit media opt-outs are preserved server-side before any player HTML is emitted, avoiding a hydration-time leak. A scoped play click can override an opt-out for one mounted player without persistent consent or enabling other players. Subsequent preference changes clear that request, including cross-tab changes.
+
+**Not a consent-compliant default-off media mode:** visible third-party embeds may receive IP/device information, set their own cookies and track before an explicit action. Neither YouTube nocookie nor X dnt proves otherwise. Calling a display toggle “consent” or classifying all social tracking as essential would be misleading. Review this requested configuration with a qualified privacy professional, including the provider-specific legal bases and international transfers; a privacy notice or opt-out toggle alone does not establish those bases. For immediate video display without social embeds, the alternative is publishing authorized video files through a first-party delivery workflow. No separately installed analytics/advertising pixel has been added, but this does not imply embedded providers cannot track.
 
 Public pages: `/tr/privacy`, `/tr/cookies`, `/tr/terms`, and English counterparts. The contact form links to its notice before submission. Reading/receiving the notice is not bundled into a required marketing or blanket consent checkbox. The public website remains usable after rejection.
 
@@ -16,7 +18,7 @@ These notices describe inspected code, not a certification of legal compliance. 
 - Confirm you have the necessary permission to publish the CV, client videos, logos, music and personal information appearing in portfolio assets. No blanket copyright ownership claim was made.
 - Review requirements for your actual target territories (including whether EU/UK rules apply). No universal GDPR/KVKK compliance badge, fictitious certification, ecommerce return policy or sales contract was added to this non-selling portfolio.
 - Test production consent on the final host. Choices are stored client-side, not in a server-side audit/CMP database. If consent proof requirements demand an audit record, select a compliant implementation with counsel; this implementation does not claim to supply one.
-- Revoking media consent unmounts players and prevents new loads. Already-transmitted information and provider cookies are outside the site's control; the settings explain browser/provider cleanup.
+- Saving video visibility off unmounts players and prevents new loads. Already-transmitted information and provider cookies are outside the site's control; the settings explain browser/provider cleanup.
 
 ## Operational dependencies not changed here
 
@@ -32,4 +34,4 @@ Follow-up security update on 2026-10-16 applied compatible Next.js 16.3.8, sharp
 - [Requests](https://www.kvkk.gov.tr/Icerik/2062/Basvuru-Hakki)
 - [International transfers](https://www.kvkk.gov.tr/Icerik/8143/Kisisel-Verilerin-Yurt-Disina-Aktarilmasi-Rehberi)
 
-Prefer changing `lib/privacy/notices.ts` and incrementing `CONSENT_VERSION` when consent scope changes. Re-run responsive/privacy tests after adding any new embed, font CDN, analytics or advertising script.
+Update `lib/privacy/notices.ts` with behavior changes. This display-mode change deliberately retains the existing record version to respect valid prior media opt-outs; do not invalidate them by bumping the version just to enable players. Re-run responsive/privacy tests after adding any new embed, font CDN, analytics or advertising script.

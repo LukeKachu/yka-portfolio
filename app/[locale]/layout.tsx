@@ -7,6 +7,8 @@ import {getSettings, getPublicDataStatus, publicAssetUrl} from '@/lib/data/publi
 import type {Metadata} from 'next'
 import {PublicNavigation} from '@/components/public/public-navigation'
 import {CookieConsentProvider,CookieSettingsButton} from '@/components/public/cookie-consent'
+import {cookies} from 'next/headers'
+import {CONSENT_COOKIE,parseConsent} from '@/lib/privacy/consent'
 
 export async function generateMetadata({params}: {params: Promise<{locale:string}>}): Promise<Metadata> {
   const {locale}=await params;if(!isLocale(locale))return {}
@@ -27,9 +29,16 @@ export default async function LocaleLayout({children, params}: {children: ReactN
   const settings = await getSettings()
   const dataStatus = await getPublicDataStatus()
   const resumeUrl = publicAssetUrl('resume-public', settings?.resume_pdf_path)
+  // Read only our preference cookie, never serialize Auth/session cookies.
+  let initialConsent:string|null = null
+  try {
+    const stored = (await cookies()).get(CONSENT_COOKIE)?.value
+    const record = parseConsent(stored ? decodeURIComponent(stored) : null)
+    if (record) initialConsent = JSON.stringify(record)
+  } catch { /* Malformed preferences do not prevent public pages from rendering. */ }
 
   return (
-    <CookieConsentProvider locale={locale}><div className="site-shell" lang={locale}>
+    <CookieConsentProvider locale={locale} initialConsent={initialConsent}><div className="site-shell" lang={locale}>
       <a className="skip-link" href="#main-content">{locale === 'tr' ? 'İçeriğe geç' : 'Skip to content'}</a>
       <header>
         <Link className="site-name" href={`/${locale}`} aria-label="YKA — Yusuf Kerim Altay"><span className="site-wordmark">YKA<span>.</span></span><span className="site-brand-caption">Yusuf Kerim Altay</span></Link>

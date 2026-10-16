@@ -1,19 +1,7 @@
 import {createHash} from 'node:crypto'
 import {z} from 'zod'
-
-export const contactSchema = z.object({
-  name:z.string().trim().min(2).max(100).regex(/^[^\r\n]+$/),
-  email:z.string().trim().toLowerCase().pipe(z.email().max(200)),
-  phone:z.string().trim().min(7).max(30).regex(/^\+?[0-9 ().-]+$/).refine(value => {
-    const digits = value.replace(/\D/g, '')
-    return digits.length >= 7 && digits.length <= 15
-  }),
-  reason:z.enum(['project','opportunity','other']),
-  message:z.string().trim().min(20).max(4000),
-  website:z.literal(''),
-  startedAt:z.coerce.number().int().positive(),
-  requestId:z.uuid(),
-})
+import {contactSchema,contactErrorFields,type ContactField} from './schema.ts'
+export {contactSchema} from './schema.ts'
 
 type Config = {apiKey?:string; from?:string; siteUrl?:string}
 type RpcResult = {data:unknown; error:{message:string}|null}
@@ -25,8 +13,8 @@ export function contactEmailConfigured(config:Config) {
   return Boolean(config.apiKey?.trim() && !/[\r\n]/.test(from) && z.email().safeParse(address).success)
 }
 
-function reply(code:string, status:number) {
-  return Response.json({ok:false,code}, {status,headers:{'Cache-Control':'no-store',...(status === 429 ? {'Retry-After':'3600'} : {})}})
+function reply(code:string, status:number,fields?:ContactField[]) {
+  return Response.json({ok:false,code,...(fields?.length?{fields}:{})}, {status,headers:{'Cache-Control':'no-store',...(status === 429 ? {'Retry-After':'3600'} : {})}})
 }
 
 async function boundedForm(request:Request) {
@@ -55,15 +43,21 @@ export async function handleContact(request:Request, {config,save,send=fetch}:De
   if (config.siteUrl) {try {allowedOrigins.push(new URL(config.siteUrl).origin)} catch {/* Ignore an invalid optional site URL. */}}
   if (!origin || !allowedOrigins.includes(origin) || request.headers.get('sec-fetch-site') === 'cross-site') return reply('forbidden',403)
   let form:FormData
-  try {form = await boundedForm(request)} catch {return reply('invalid',400)}
+  try {form = await boundedForm(request)} catch {return reply('invalid_request',400)}
   const parsed = contactSchema.safeParse(Object.fromEntries(form))
-  if (!parsed.success) return reply('invalid',400)
+  if (!parsed.success) {
+    // Return only public field names, never submitted values, Zod details or bot checks.
+    if (parsed.error.issues.some(issue=>issue.path[0]==='website')) return reply('invalid',400)
+    const fields=contactErrorFields(parsed.error.issues)
+    return fields.length?reply('invalid',400,fields):reply('refresh_required',400)
+  }
   const data = parsed.data
   const elapsed = Date.now() - data.startedAt
   if (elapsed < 2500 || elapsed > 86400000) return reply('too_fast',400)
   if (!contactEmailConfigured(config)) return reply('unavailable',503)
 
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
+  // Cloudflare supplies this verified client address; prefer it to a forwarded chain.
+  const ip = request.headers.get('cf-connecting-ip')?.trim() || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
   const userAgent = (request.headers.get('user-agent') || '').slice(0,500)
   const fingerprint = createHash('sha256').update(`${ip}|${userAgent}`).digest('hex')
   let saved:RpcResult

@@ -2,15 +2,16 @@
 
 import {useState} from 'react'
 import {useConsent} from './cookie-consent'
+import {externalMediaVisible} from '@/lib/privacy/consent'
 
-// A play click enables this mounted player only, never other videos or a persistent cookie.
-// A later privacy choice (including withdrawal in another tab) clears that request.
+// New visitors see players immediately. An existing explicit opt-out is respected.
+// A play click can override that opt-out for this mounted player only.
 export function useMediaAccess() {
   const {consent} = useConsent()
   const [request,setRequest] = useState({consent,requested:false})
   if (request.consent !== consent) setRequest({consent,requested:false})
   return {
-    enabled:Boolean(consent?.externalMedia) || (request.consent === consent && request.requested),
+    enabled:externalMediaVisible(consent) || (request.consent === consent && request.requested),
     play:() => setRequest({consent,requested:true}),
   }
 }

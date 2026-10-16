@@ -62,7 +62,7 @@ export async function getProjects(featuredOnly = false) {
   if (!isSupabaseConfigured) return []
   const {data, error} = await readPublicResult(async () => {
     const supabase = await publicClient()
-    let request = supabase.from('projects').select('*, brands(name,slug), project_work_types(work_types(id,slug,label_tr,label_en)), project_links(*), project_media(*)').eq('published', true).order('sort_order')
+    let request = supabase.from('projects').select('*, brands(name,slug), project_work_types(work_types(id,slug,label_tr,label_en)), project_roles(*), project_links(*), project_media(*)').eq('published', true).order('sort_order')
     if (featuredOnly) request = request.eq('featured', true)
     return request
   })

@@ -5,6 +5,11 @@ export const CONSENT_MAX_AGE = CONSENT_DAYS * 86400
 export type ConsentChoices = {preferences:boolean; externalMedia:boolean}
 export type ConsentRecord = ConsentChoices & {version:number; updatedAt:number}
 
+// Media visibility is not proof of consent. Keep explicit legacy opt-outs intact.
+export function externalMediaVisible(record:ConsentRecord|null) {
+  return record?.externalMedia !== false
+}
+
 export function parseConsent(raw:string|null, now=Date.now()):ConsentRecord|null {
   try {
     if (!raw) return null

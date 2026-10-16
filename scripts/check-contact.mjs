@@ -8,6 +8,11 @@ for (const [name,present] of [['RESEND_API_KEY',Boolean(config.apiKey?.trim())],
   console.log(`${name}: ${present ? 'configured (value hidden)' : 'MISSING'}`)
 }
 if (!contactEmailConfigured(config)) {console.log('Email delivery: NOT READY. Configure a Resend key and verified-domain sender.'); ready=false}
+else {
+  const testSender = /(?:^|<)onboarding@resend\.dev>?$/i.test(config.from.trim())
+  console.log(testSender ? 'Sender mode: OWNER-ONLY TEST. The recipient must be the email associated with the Resend account.' : 'Sender mode: CUSTOM DOMAIN. Verify domain ownership/DNS in Resend; this check cannot confirm it.')
+  console.log('API credentials: present, but acceptance by Resend has NOT been tested.')
+}
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 if (url && key) {

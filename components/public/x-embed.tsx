@@ -1,5 +1,5 @@
 'use client'
-import {ArrowIcon} from '@/components/public/arrow-icon'
+import {EmbeddedPlayer} from './embedded-player'
 
 import {useSyncExternalStore} from 'react'
 import {useMediaAccess} from './use-media-access'
@@ -11,7 +11,7 @@ function subscribeTheme(change:()=>void) {
   return () => observer.disconnect()
 }
 const currentTheme = () => document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
-const serverTheme = () => 'light'
+const serverTheme = () => 'dark'
 
 export function XEmbed({id,title,locale,poster}: {id:string; title:string; locale:'tr'|'en';poster?:string}) {
   const {enabled,play} = useMediaAccess()
@@ -20,8 +20,5 @@ export function XEmbed({id,title,locale,poster}: {id:string; title:string; local
   // Use X's own isolated embed, the same frame rendered by its widget library.
   // No per-video cover files, ID-to-image registry or parent-page widget script.
   const params = new URLSearchParams({id,dnt:'true',lang:locale,theme,hideThread:'true'})
-  return <div className="media-frame media-stage media-stage-x" aria-label={title}>
-    <iframe src={`https://platform.twitter.com/embed/Tweet.html?${params}`} title={title} loading="lazy" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen/>
-    <a className="social-source-link" href={`https://x.com/i/status/${id}`} target="_blank" rel="noreferrer">{locale === 'tr' ? 'X üzerinde izle' : 'Watch on X'} <ArrowIcon direction="up-right"/></a>
-  </div>
+  return <EmbeddedPlayer src={`https://platform.twitter.com/embed/Tweet.html?${params}`} title={title} locale={locale} platform="x" sourceUrl={`https://x.com/i/status/${id}`}/>
 }

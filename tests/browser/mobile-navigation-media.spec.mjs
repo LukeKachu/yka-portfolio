@@ -1,0 +1,91 @@
+import {test,expect} from '@playwright/test'
+import {mkdir} from 'node:fs/promises'
+
+test.use({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'no-preference'})
+test.beforeEach(async({context})=>{
+  // Deliberately scrollable provider fixtures exercise iframe gesture isolation.
+  await context.route(/https:\/\/(?:[^/]*\.)?(?:youtube(?:-nocookie)?\.com|ytimg\.com|instagram\.com|tiktok\.com|twitter\.com|x\.com|videodelivery\.net|cloudflarestream\.com)\//i,route=>route.fulfill({contentType:'text/html',body:'<html><body style="margin:0"><div style="height:3000px;background:#223021;color:white">Isolated provider preview</div></body></html>'}))
+})
+
+test('mobile navigation stays above animated content, opaque and tappable in TR and EN',async({page})=>{
+  for (const locale of ['tr','en']) {
+    for (const [path,label] of [['work',locale==='tr'?'Çalışmalar':'Work'],['resume',locale==='tr'?'Özgeçmiş':'Resume'],['contact',locale==='tr'?'İletişim':'Contact']]) {
+      await page.goto(`/${locale}`)
+      const toggle=page.locator('.mobile-menu-toggle')
+      await toggle.tap()
+      const nav=page.locator('#public-nav')
+      const link=nav.getByRole('link',{name:label,exact:true})
+      await expect(nav).toBeVisible()
+      const style=await nav.evaluate(el=>({background:getComputedStyle(el).backgroundColor,opacity:getComputedStyle(el).opacity}))
+      expect(style.background).not.toBe('rgba(0, 0, 0, 0)')
+      expect(style.opacity).toBe('1')
+      expect(await link.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})).toBe(true)
+      expect((await link.boundingBox()).height).toBeGreaterThanOrEqual(48)
+      await link.tap()
+      await expect(page).toHaveURL(new RegExp(`/${locale}/${path}$`))
+      await expect(toggle).toHaveAttribute('aria-expanded','false')
+    }
+  }
+  await page.goto('/tr/work')
+  await page.locator('.mobile-menu-toggle').tap()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('.mobile-menu-toggle')).toBeFocused()
+  await expect(page.locator('#public-nav')).not.toBeVisible()
+  await page.locator('.mobile-menu-toggle').tap()
+  await page.locator('#public-nav').getByRole('button',{name:'Renk temasını değiştir'}).tap()
+  await expect(page.locator('html')).toHaveAttribute('data-theme','light')
+  await mkdir('tmp/privacy-qa',{recursive:true})
+  await page.screenshot({path:'tmp/privacy-qa/mobile-menu-light.png'})
+  await page.locator('#public-nav').getByRole('button',{name:'Renk temasını değiştir'}).tap()
+  await page.screenshot({path:'tmp/privacy-qa/mobile-menu-dark.png'})
+  await page.locator('#public-nav').getByRole('link',{name:'Switch to English'}).tap()
+  await expect(page).toHaveURL(/\/en\/work$/)
+})
+
+test('swiping across X and other previews scrolls the page, not the embedded timeline',async({page,context})=>{
+  await page.goto('/tr/work')
+  const cdp=await context.newCDPSession(page)
+  for (const platform of ['x','instagram','youtube','tiktok']) {
+    const frame=page.locator(`.media-stage-${platform}`).first()
+    await frame.scrollIntoViewIfNeeded()
+    await page.evaluate(()=>window.scrollBy({top:-100,behavior:'instant'}))
+    await expect(frame.locator('iframe').first()).toHaveAttribute('inert','')
+    await expect(frame.locator('iframe').first()).toHaveCSS('pointer-events','none')
+    const box=await frame.boundingBox()
+    const before=await page.evaluate(()=>scrollY)
+    const x=Math.round(box.x+box.width/2)
+    const y=Math.round(Math.min(620,box.y+box.height*.65))
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]})
+    for(let step=1;step<=8;step++) await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-step*25}]})
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+    await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(before+60)
+    expect(await frame.locator('iframe').first().contentFrame().locator('body').evaluate(()=>window.scrollY)).toBe(0)
+    await expect(page.locator('.embed-dialog[open]')).toHaveCount(0)
+  }
+  await cdp.detach()
+})
+
+test('intentional playback opens a separate accessible viewer and returns to the same list position',async({page})=>{
+  await page.goto('/tr/work')
+  const preview=page.locator('.media-stage-x').first()
+  const trigger=preview.locator('.embed-preview-open')
+  await trigger.scrollIntoViewIfNeeded()
+  const before=await page.evaluate(()=>scrollY)
+  const originalSrc=await preview.locator('iframe').first().getAttribute('src')
+  await trigger.tap()
+  const dialog=page.locator('.embed-dialog[open]')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.locator('iframe')).toHaveAttribute('src',originalSrc)
+  await expect(dialog.locator('iframe')).not.toHaveAttribute('inert','')
+  await expect(preview.locator(':scope > iframe')).toHaveCount(0)
+  await expect(page.locator('body')).toHaveCSS('overflow','hidden')
+  await dialog.getByRole('button',{name:'Kapat',exact:true}).tap()
+  await expect(dialog).not.toBeVisible()
+  await expect(trigger).toBeFocused()
+  expect(Math.abs(await page.evaluate(()=>scrollY)-before)).toBeLessThan(3)
+  await expect(preview.locator(':scope > iframe')).toHaveAttribute('inert','')
+  await expect(page.locator('body')).not.toHaveCSS('overflow','hidden')
+  await trigger.tap()
+  await page.keyboard.press('Escape')
+  await expect(dialog).not.toBeVisible()
+})

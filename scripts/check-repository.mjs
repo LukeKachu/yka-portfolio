@@ -15,6 +15,7 @@ const patterns = [
   ['GitHub credential', /\b(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})\b/],
   ['OpenAI credential', /\bsk-(?:proj-|svcacct-)[A-Za-z0-9_-]{24,}\b/],
   ['Supabase privileged credential', /\bsb_secret_[A-Za-z0-9_-]{20,}\b/],
+  ['Resend credential', /\bre_[A-Za-z0-9_-]{20,}\b/],
 ]
 const issues = []
 for (const file of files) {

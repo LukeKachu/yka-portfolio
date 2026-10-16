@@ -3,6 +3,17 @@ import {readFile} from 'node:fs/promises'
 import test from 'node:test'
 import {PGlite} from '@electric-sql/pglite'
 import {contactEmailConfigured, contactSchema, handleContact} from '../lib/contact/handler.ts'
+import {contactMailto} from '../lib/contact/mailto.ts'
+import {createHash} from 'node:crypto'
+
+test('mail-app fallback encodes all contact fields and cannot inject recipients or email headers',()=>{
+  const url=new URL(contactMailto('owner@example.com',{name:'A & B',email:'visitor@example.com',phone:'+90 555 1234567',reason:'project',message:'A message with &bcc=other@example.com and a new\nline.'},'tr'))
+  assert.equal(url.protocol,'mailto:')
+  assert.equal(url.pathname,'owner@example.com')
+  assert.deepEqual([...url.searchParams.keys()],['subject','body'])
+  assert.match(url.searchParams.get('body'),/Telefon: \+90 555/)
+  assert.match(url.searchParams.get('body'),/&bcc=other@example.com/)
+})
 
 // Test fixtures are in-memory only; no environment files, emails or real database writes.
 const id = '11111111-1111-4111-8111-111111111111'
@@ -33,6 +44,23 @@ test('unconfigured form does not write to the database or claim email success', 
   assert.deepEqual(await response.json(),{ok:false,code:'unavailable'})
 })
 
+test('a long message with another invalid field identifies that field, not message length',async()=>{
+  const dependencies={config,save:()=>assert.fail('invalid input must not save'),send:()=>assert.fail('invalid input must not send')}
+  for(const [field,value] of [['phone','not-a-number'],['email','not-an-email'],['reason','unsupported'],['name','x'],['message','too short']]) {
+    const response=await handleContact(request({[field]:value}),dependencies)
+    assert.equal(response.status,400)
+    assert.deepEqual(await response.json(),{ok:false,code:'invalid',fields:[field]})
+  }
+  assert.deepEqual(await (await handleContact(request({website:'bot'}),dependencies)).json(),{ok:false,code:'invalid'})
+  assert.deepEqual(await (await handleContact(request({requestId:'invalid'}),dependencies)).json(),{ok:false,code:'refresh_required'})
+})
+
+test('pasted phone-number spaces normalize consistently without allowing letters or changing digit limits',()=>{
+  const parsed=contactSchema.safeParse({name:'Test Visitor',email:'visitor@example.com',phone:'+90\u00a0555\u202f123\u00a045\u202f67',reason:'other',message:'A valid message exceeding twenty characters.',website:'',startedAt:Date.now(),requestId:id})
+  assert.equal(parsed.success,true)
+  assert.equal(parsed.data.phone,'+90 555 123 45 67')
+})
+
 test('invalid, cross-origin, honeypot, timestamp and oversized requests are rejected before any writes', async () => {
   const dependencies = {config,save:() => assert.fail('must not save')}
   for (const req of [request({phone:''}),request({website:'bot.example'}),request({startedAt:'0'}),request({startedAt:String(Date.now()+60000)}),request({message:'x'.repeat(33000)}),request({},{origin:'https://evil.example'}),new Request('http://localhost:3000/api/contact',{method:'POST',headers:{origin:'http://localhost:3000','Content-Type':'application/json'},body:'{}'})]) {
@@ -49,6 +77,17 @@ test('database and email-provider errors cannot result in a false success', asyn
     assert.equal(result.status,503)
     assert.equal((await result.json()).ok,false)
   }
+})
+
+test('Cloudflare rate-limit fingerprints use its client address rather than a supplied forwarded chain',async()=>{
+  let fingerprint
+  const response=await handleContact(request({}, {'cf-connecting-ip':'192.0.2.10','x-forwarded-for':'198.51.100.20','user-agent':'QA'}),{
+    config,
+    save:async args=>{fingerprint=args.p_fingerprint;return {data:id,error:null}},
+    send:async()=>Response.json({id}),
+  })
+  assert.equal(response.status,200)
+  assert.equal(fingerprint,createHash('sha256').update('192.0.2.10|QA').digest('hex'))
 })
 
 test('email contains phone, safe HTML and correct Reply-To; retry uses the same idempotency key', async () => {
