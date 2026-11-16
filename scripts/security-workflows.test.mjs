@@ -9,6 +9,18 @@ import {isPrivateIPv4,previewCandidates} from '../lib/preview/network.ts'
 
 const require = createRequire(import.meta.url)
 
+test('www redirects only the exact portfolio hostname and preserves the path',async()=>{
+  const rules=await config.redirects()
+  assert.equal(rules.length,1)
+  const rule=rules[0]
+  assert.equal(rule.source,'/:path*')
+  assert.equal(rule.destination,'https://yusufkerimaltay.com/:path*')
+  assert.equal(rule.permanent,true)
+  const host=new RegExp(`^(?:${rule.has[0].value})$`)
+  assert.equal(host.test('www.yusufkerimaltay.com'),true)
+  for(const other of ['yusufkerimaltay.com','wwwXyusufkerimaltayXcom','www.yusufkerimaltay.com.attacker.example','localhost','yka-portfolio.yusufkerimaltay77.workers.dev'])assert.equal(host.test(other),false)
+})
+
 test('installed Next.js and native image processing versions include the audited security patches', () => {
   const next = require('next/package.json').version.split('.').map(Number)
   assert.ok(next[0]>16 || next[0]===16 && (next[1]>3 || next[1]===3 && next[2]>=8))

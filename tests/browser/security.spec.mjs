@@ -1,5 +1,15 @@
 import {test,expect} from '@playwright/test'
 
+test('www redirects preserve locale, nested path and query without redirecting the main hostname',async({request})=>{
+  for(const path of ['/tr','/en/contact?source=portfolio','/tr/work/an-example?from=share']) {
+    const response=await request.get(path,{headers:{host:'www.yusufkerimaltay.com'},maxRedirects:0})
+    expect(response.status()).toBe(308)
+    expect(response.headers().location).toBe(`https://yusufkerimaltay.com${path}`)
+  }
+  const main=await request.get('/tr',{headers:{host:'yusufkerimaltay.com'},maxRedirects:0})
+  expect(main.status()).toBe(200)
+})
+
 test('public and login responses include baseline security headers',async ({request}) => {
   for (const path of ['/tr','/tr/contact','/admin/login']) {
     const response = await request.get(path)
