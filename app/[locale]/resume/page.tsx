@@ -12,18 +12,19 @@ export async function generateMetadata({params}:{params:Promise<{locale:string}>
 }
 
 const institutionNames:Record<string,{tr:string;en:string}>={'Pamukkale University':{tr:'Pamukkale Üniversitesi',en:'Pamukkale University'},'Yalova Çiftlikköy Atatürk Anatolian High School':{tr:'Yalova Çiftlikköy Atatürk Anadolu Lisesi',en:'Yalova Çiftlikköy Atatürk Anatolian High School'}}
-const organizationNames:Record<string,{tr:string;en:string}>={'Pamukkale University Business Committee':{tr:'Pamukkale Üniversitesi İşletme Kulübü',en:'Pamukkale University Business Committee'},'Pamukkale Üniversitesi İşletme Kulübü':{tr:'Pamukkale Üniversitesi İşletme Kulübü',en:'Pamukkale University Business Committee'}}
+const businessCommunity={tr:'Pamukkale Üniversitesi İşletme Kulübü',en:'Pamukkale University Business Community'}
+const organizationNames:Record<string,{tr:string;en:string}>={'Pamukkale University Business Committee':businessCommunity,'Pamukkale Üniversitesi İşletme Kulübü':businessCommunity,'PAMUKKALE UNIVERSITY BUSINESS COMMUNITY':businessCommunity}
 
 export default async function ResumePage({params}:{params:Promise<{locale:string}>}) {
   const {locale}=await params;if(!isLocale(locale))notFound()
   const [experience,education,volunteering,skillGroups,languages,settings,about]=await Promise.all([getExperiences(),getEducation(),getVolunteering(),getSkillGroups(),getLanguages(),getSettings(),getAbout()])
-  const resumeUrl=publicAssetUrl('resume-public',settings?.resume_pdf_path)||'/cv/Yusuf-Kerim-Altay-Social-Media-CV.pdf'
+  const resumeUrl=publicAssetUrl('resume-public',settings?.resume_pdf_path)
   const date=(value:unknown)=>value?new Intl.DateTimeFormat(locale,{month:'short',year:'numeric'}).format(new Date(String(value))):''
   const dateRange=(start:unknown,end:unknown,current=false)=>[date(start),current?copy[locale].present:date(end)].filter(Boolean).join(' — ')
   const aboutCopy=String(about?.[`content_${locale}`]||'')
   return <main>
-    <div className="page-heading resume-hero"><div><p className="eyebrow">YKA · Yusuf Kerim Altay</p><h1>{copy[locale].resume}</h1></div><a className="resume-download" href={resumeUrl} target="_blank" rel="noreferrer">{copy[locale].downloadResume}<span><ArrowIcon direction="down"/></span></a></div>
-    <details className="resume-document"><summary><span>{locale==='tr'?'Orijinal CV dosyamı görüntüle':'View my original CV'}</span><span aria-hidden="true">＋</span></summary><iframe src={resumeUrl} title={locale==='tr'?'Yusuf Kerim Altay — CV dosyası':'Yusuf Kerim Altay — CV document'} loading="lazy"/><p><a className="section-link" href={resumeUrl} target="_blank" rel="noreferrer">{locale==='tr'?'PDF’yi yeni sekmede aç':'Open PDF in a new tab'} <ArrowIcon direction="up-right"/></a></p></details>
+    <div className="page-heading resume-hero"><div><p className="eyebrow">YKA · Yusuf Kerim Altay</p><h1>{copy[locale].resume}</h1></div>{resumeUrl?<a className="resume-download" href={resumeUrl} target="_blank" rel="noreferrer">{copy[locale].downloadResume}<span><ArrowIcon direction="down"/></span></a>:null}</div>
+    {resumeUrl?<details className="resume-document"><summary><span>{locale==='tr'?'Orijinal CV dosyamı görüntüle':'View my original CV'}</span><span aria-hidden="true">＋</span></summary><iframe src={resumeUrl} title={locale==='tr'?'Yusuf Kerim Altay — CV dosyası':'Yusuf Kerim Altay — CV document'} loading="lazy"/><p><a className="section-link" href={resumeUrl} target="_blank" rel="noreferrer">{locale==='tr'?'PDF’yi yeni sekmede aç':'Open PDF in a new tab'} <ArrowIcon direction="up-right"/></a></p></details>:null}
     {aboutCopy?<section className="resume-about"><p className="eyebrow">{locale==='tr'?'Hakkımda':'About'}</p><p>{aboutCopy}</p></section>:null}
     <section className="resume-section" id="experience"><h2>{locale==='tr'?'Deneyim':'Experience'}</h2>{experience.length?experience.map(item=><article className="resume-item" key={String(item.id)}><div><h3>{String(item[`job_title_${locale}`]||'')}</h3><p className="resume-item-company">{item.company_url?<a href={String(item.company_url)} target="_blank" rel="noreferrer">{String(item.company)} <ArrowIcon direction="up-right"/></a>:<span className="company-name">{String(item.company)}</span>}</p></div><time>{dateRange(item.start_date,item.end_date,Boolean(item.current_position))}</time><ul>{((item[`bullets_${locale}`] as string[])||[]).map(bullet=><li key={bullet}>{bullet}</li>)}</ul></article>):<EmptyState locale={locale}>{copy[locale].noContent}</EmptyState>}</section>
     <section className="resume-columns">

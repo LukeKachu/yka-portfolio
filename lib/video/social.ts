@@ -41,8 +41,14 @@ export function compactReach(total:bigint, locale:'tr'|'en') {
   const scale = total >= 1_000_000_000n ? 1_000_000_000n : total >= 1_000_000n ? 1_000_000n : total >= 1_000n ? 1_000n : 1n
   const units = {1000000000:'B',1000000:'M',1000:'K',1:''}
   if (scale === 1n) return {value:new Intl.NumberFormat(locale).format(total),unit:'',plus:false}
-  // A quiet milestone, rounded down so it never overstates recorded reach.
-  return {value:new Intl.NumberFormat(locale).format(total/scale),unit:units[Number(scale) as keyof typeof units],plus:total%scale > 0n}
+  // Keep one decimal, rounded DOWN with integer arithmetic; never inflate reach.
+  const tenth = scale / 10n
+  const truncated = total / tenth
+  const whole = truncated / 10n
+  const decimal = truncated % 10n
+  const separator = locale === 'tr' ? ',' : '.'
+  const value = new Intl.NumberFormat(locale).format(whole) + (decimal ? `${separator}${decimal}` : '')
+  return {value,unit:units[Number(scale) as keyof typeof units],plus:total%tenth > 0n}
 }
 
 export function summarizeReach(projects: Row[]) {

@@ -152,9 +152,12 @@ test('reach sums snapshots, separates post views, excludes drafts, unknowns and 
 })
 
 test('compact reach never rounds up and remains localized', () => {
-  assert.deepEqual(compactReach(13148735n,'tr'),{value:'13',unit:'M',plus:true})
-  assert.deepEqual(compactReach(13148735n,'en'),{value:'13',unit:'M',plus:true})
-  assert.deepEqual(compactReach(1999999n,'en'),{value:'1',unit:'M',plus:true})
+  assert.deepEqual(compactReach(13148735n,'tr'),{value:'13,1',unit:'M',plus:true})
+  assert.deepEqual(compactReach(13148735n,'en'),{value:'13.1',unit:'M',plus:true})
+  assert.deepEqual(compactReach(1999999n,'en'),{value:'1.9',unit:'M',plus:true})
+  assert.deepEqual(compactReach(19500000n,'tr'),{value:'19,5',unit:'M',plus:false})
+  assert.deepEqual(compactReach(19506597n,'tr'),{value:'19,5',unit:'M',plus:true})
+  assert.deepEqual(compactReach(19506597n,'en'),{value:'19.5',unit:'M',plus:true})
   assert.deepEqual(compactReach(13000000n,'tr'),{value:'13',unit:'M',plus:false})
   assert.deepEqual(compactReach(802n,'tr'),{value:'802',unit:'',plus:false})
 })

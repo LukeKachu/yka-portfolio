@@ -9,13 +9,14 @@ import {PublicNavigation} from '@/components/public/public-navigation'
 import {CookieConsentProvider,CookieSettingsButton} from '@/components/public/cookie-consent'
 import {cookies} from 'next/headers'
 import {CONSENT_COOKIE,parseConsent} from '@/lib/privacy/consent'
+import {portfolioShareImage} from '@/lib/seo/metadata'
 
 export async function generateMetadata({params}: {params: Promise<{locale:string}>}): Promise<Metadata> {
   const {locale}=await params;if(!isLocale(locale))return {}
   const settings=await getSettings();const site=String(settings?.production_site_url||process.env.NEXT_PUBLIC_SITE_URL||'')
   const title=String(settings?.[`seo_title_${locale}`]||settings?.full_name||'Yusuf Kerim Altay')
   const description=String(settings?.[`seo_description_${locale}`]||'')
-  return {title,description,metadataBase:site?new URL(site):undefined,alternates:{canonical:`/${locale}`,languages:{en:'/en',tr:'/tr','x-default':'/en'}},openGraph:{title,description,locale:locale==='tr'?'tr_TR':'en_US',type:'website'},twitter:{card:'summary_large_image',title,description}}
+  return {title,description,metadataBase:site?new URL(site):undefined,alternates:{canonical:`/${locale}`,languages:{en:'/en',tr:'/tr','x-default':'/en'}},openGraph:{title,description,locale:locale==='tr'?'tr_TR':'en_US',type:'website',images:[portfolioShareImage]},twitter:{card:'summary_large_image',title,description,images:[portfolioShareImage]}}
 }
 
 export function generateStaticParams() {
