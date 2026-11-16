@@ -14,6 +14,7 @@ export async function generateMetadata({params}:{params:Promise<{locale:string}>
 const institutionNames:Record<string,{tr:string;en:string}>={'Pamukkale University':{tr:'Pamukkale Üniversitesi',en:'Pamukkale University'},'Yalova Çiftlikköy Atatürk Anatolian High School':{tr:'Yalova Çiftlikköy Atatürk Anadolu Lisesi',en:'Yalova Çiftlikköy Atatürk Anatolian High School'}}
 const businessCommunity={tr:'Pamukkale Üniversitesi İşletme Kulübü',en:'Pamukkale University Business Community'}
 const organizationNames:Record<string,{tr:string;en:string}>={'Pamukkale University Business Committee':businessCommunity,'Pamukkale Üniversitesi İşletme Kulübü':businessCommunity,'PAMUKKALE UNIVERSITY BUSINESS COMMUNITY':businessCommunity}
+const hobbies={tr:['Kamp','Squash','Bağlama çalmak','Gitar çalmak','Yeni teknolojiler'],en:['Camping','Squash','Playing the bağlama','Playing the guitar','Emerging technologies']}
 
 export default async function ResumePage({params}:{params:Promise<{locale:string}>}) {
   const {locale}=await params;if(!isLocale(locale))notFound()
@@ -32,6 +33,8 @@ export default async function ResumePage({params}:{params:Promise<{locale:string
       <div className="resume-card"><h2>{locale==='tr'?'Diller':'Languages'}</h2><div className="language-list">{languages.map(language=><div className="language-row" key={String(language.id)}><strong>{String(language[`name_${locale}`]||'')}</strong><span>{String(language[`proficiency_${locale}`]||'')}</span></div>)}</div></div>
       <div className="resume-card volunteering-card"><h2>{locale==='tr'?'Gönüllülük':'Volunteering'}</h2>{volunteering.map(item=><div className="resume-card-item volunteering-item" key={String(item.id)}><strong>{organizationNames[String(item.organization)]?.[locale]||String(item.organization)}</strong><div className="resume-card-meta"><span>{String(item[`role_${locale}`]||'')}</span><small>{dateRange(item.start_date,item.end_date)}</small></div><ul>{((item[`bullets_${locale}`] as string[])||[]).map(bullet=><li key={bullet}>{bullet}</li>)}</ul></div>)}</div>
       <div className="resume-card skills-card"><h2>{copy[locale].capabilities}</h2>{skillGroups.map(group=><div className="resume-card-item" key={String(group.id)}><strong>{String(group[`title_${locale}`]||'')}</strong><div className="skill-list">{((group.skills as Array<Record<string,unknown>>)||[]).map((skill,index)=><span key={String(skill.id)}><b>{String(index+1).padStart(2,'0')}</b>{String(skill[`name_${locale}`]||skill.name)}</span>)}</div></div>)}</div>
+      <div className="resume-card"><h2>{locale==='tr'?'İlgi Alanları':'Interests'}</h2><div className="skill-list">{hobbies[locale].map(hobby=><span key={hobby}>{hobby}</span>)}</div></div>
+      <div className="resume-card"><h2>{locale==='tr'?'Ek Bilgi':'Additional Information'}</h2><div className="language-row"><strong>{locale==='tr'?'Ehliyet':'Driver’s License'}</strong><span>{locale==='tr'?'B sınıfı':'Class B'}</span></div></div>
     </section>
   </main>
 }
