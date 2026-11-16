@@ -4,6 +4,11 @@ The form sends to **yusufkerimaltay77@gmail.com**. Name, email, phone, subject a
 
 ## One-time configuration
 
+**Current security rollout:** follow [contact gateway rollout](contact-gateway-rollout.md)
+before deploying the November update. Server delivery now additionally requires
+`CONTACT_GATEWAY_SECRET`, both Turnstile keys, and migrations 008/009 in the documented
+staged order. Do not rerun older contact migrations after 009. Phone is optional.
+
 1. In Supabase SQL Editor, run `supabase/migrations/202608300004_contact_messages.sql` if not already applied, then `supabase/migrations/202610160007_contact_phone.sql`. Both are additive and re-runnable; existing messages are preserved. No service-role credential is needed.
 2. In [Resend Domains](https://resend.com/domains), add a domain you own and add the DNS records Resend provides. Wait until the domain is verified. Do not invent DNS values. A Gmail address cannot be used as your verified sending domain.
 3. In [Resend API Keys](https://resend.com/api-keys), create a sending-only key restricted to that domain. Keep it private.
@@ -41,10 +46,10 @@ Official references: [test-domain limits](https://resend.com/docs/knowledge-base
 
 ## Security / maintenance
 
-- Optional Cloudflare Turnstile is configured separately using the runtime variables `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`. See [Turnstile setup](turnstile-setup.md). Both configured keys enforce server-side verification before database writes or email delivery; partial setup fails closed. Leaving both absent preserves the existing working setup during installation. The secret never reaches the browser.
+- Cloudflare Turnstile is configured using runtime variables `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`. See [Turnstile setup](turnstile-setup.md). The secure server-delivery path requires both keys and `CONTACT_GATEWAY_SECRET`; missing protection offers the mail-app draft instead. Secrets never reach the browser.
 
 - Server-side validation, bounded 32 KiB request bodies, same-origin checks, honeypot and minimum completion time.
-- Persistent database rate limits: three new submissions per request fingerprint/hour, ten per email/day. Failed email retries do not consume another database submission. Forwarded IP headers must be overwritten by the trusted deployment proxy; do not trust arbitrary client-supplied headers on a custom host.
+- Persistent database rate limits: three new submissions per address fingerprint/hour, ten per email/day. User-Agent no longer changes the fingerprint. Failed email retries do not consume another database submission. Forwarded IP headers must be overwritten by the trusted deployment proxy; do not trust arbitrary client-supplied headers on a custom host.
 - Contact data remains behind the existing admin-only RLS policies. This migration adds no anonymous read policy and does not disable RLS.
 - No user-entered HTML is executed in email. Provider errors/credentials and raw message data are not logged or returned to clients.
 - Honeypots/time checks/rate limits reduce spam; they are not a CAPTCHA or a guarantee against all automated abuse. Monitor volume and add a managed challenge if abuse occurs.

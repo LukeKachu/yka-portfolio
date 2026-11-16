@@ -7,11 +7,11 @@ export type ContactField=typeof contactFieldNames[number]
 export const contactFieldsSchema=z.object({
   name:z.string().trim().min(2).max(100).regex(/^[^\r\n]+$/),
   email:z.string().trim().toLowerCase().pipe(z.email().max(200)),
-  phone:z.preprocess(value=>typeof value==='string'?value.replace(/[\u00a0\u202f]/g,' '):value,
-    z.string().trim().min(7).max(30).regex(/^\+?[0-9 ().-]+$/).refine(value=>{
+  phone:z.preprocess(value=>value==null?'':typeof value==='string'?value.replace(/[\u00a0\u202f]/g,' ').trim():value,
+    z.union([z.literal(''),z.string().min(7).max(30).regex(/^\+?[0-9 ().-]+$/).refine(value=>{
       const digits=value.replace(/\D/g,'')
       return digits.length>=7&&digits.length<=15
-    })),
+    })])),
   reason:z.enum(['project','opportunity','other']),
   message:z.string().trim().min(20).max(4000),
   website:z.literal(''),

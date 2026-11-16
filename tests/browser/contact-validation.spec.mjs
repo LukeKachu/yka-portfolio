@@ -1,5 +1,49 @@
 import {test,expect} from '@playwright/test'
 
+test('skip link is hidden during form editing but remains reachable by keyboard',async({page})=>{
+  await page.setViewportSize({width:320,height:740})
+  await page.goto('/tr/contact')
+  await page.keyboard.press('Tab')
+  await expect(page.locator('.skip-link')).toBeFocused()
+  await expect(page.locator('.skip-link')).toBeInViewport()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('#main-content')).toBeFocused()
+  await page.locator('textarea[name="message"]').fill('An isolated message that stays in this browser only.')
+  const skip=await page.locator('.skip-link').evaluate(el=>({focused:el.matches(':focus'),bottom:el.getBoundingClientRect().bottom,transform:getComputedStyle(el).transform}))
+  expect(skip.focused).toBe(false)
+  expect(skip.bottom,JSON.stringify(skip)).toBeLessThanOrEqual(0)
+})
+
+for(const width of [320,375,430,740]) {
+  test(`phone-free draft works at ${width}px, remains readable and never sends (${width})`,async({page})=>{
+    await page.setViewportSize({width,height:width===740?360:740})
+    await page.route('**/api/contact',()=>{throw new Error('A draft must never submit to the API')})
+    for(const locale of ['tr','en']) {
+      await page.goto(`/${locale}/contact`)
+      const prepare=page.locator('.contact-submit')
+      test.skip(!(await prepare.innerText()).match(/taslağını|draft/),'Use isolated widget harness for configured server-delivery testing.')
+      await page.locator('input[name="name"]').fill('Browser QA')
+      await page.locator('input[name="email"]').fill('visitor@example.com')
+      await page.locator('select[name="reason"]').selectOption('other')
+      await page.locator('textarea[name="message"]').fill('A genuine-looking isolated draft. No message is sent or stored.')
+      await expect(page.locator('input[name="phone"]')).not.toHaveAttribute('required')
+      for(const control of await page.locator('.contact-fields input,.contact-fields select,.contact-fields textarea').all()) {
+        expect((await control.boundingBox()).height).toBeGreaterThanOrEqual(44)
+        if(width<=600)expect(await control.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16)
+      }
+      await prepare.click()
+      const link=page.locator('.contact-draft-ready a')
+      await expect(link).toBeVisible()
+      expect(new URL(await link.getAttribute('href')).searchParams.get('body')).not.toMatch(/(?:Telefon|Phone):/)
+      await expect(page.locator('.contact-success')).toHaveCount(0)
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+      await page.locator('textarea[name="message"]').fill('A revised draft message exceeding twenty characters.')
+      await expect(link).toHaveCount(0)
+    }
+    await page.screenshot({path:`tmp/privacy-qa/contact-optional-${width}.png`,fullPage:true})
+  })
+}
+
 test('a long message never reports a message-length error when the phone field is invalid',async({page})=>{
   await page.setViewportSize({width:390,height:844})
   await page.goto('/tr/contact')

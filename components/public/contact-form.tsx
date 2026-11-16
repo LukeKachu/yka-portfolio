@@ -22,7 +22,7 @@ export function ContactForm({locale, email, deliveryAvailable,turnstileSiteKey}:
   const labels = tr ? {
     kicker:'01 / Projenden bahset', title:'Bir proje notu bırak.',
     name:'Ad soyad', nameHint:'Adın ve soyadın', email:'E-posta adresi', emailHint:'sana@ulasabilecegim.com',
-    phone:'Telefon numarası', phoneHint:'+90 5xx xxx xx xx', phoneHelp:'Ülke koduyla birlikte yazabilirsin.',
+    phone:'Telefon numarası', phoneHint:'+90 5xx xxx xx xx', phoneHelp:'İsteğe bağlı. Dönüş yapmam için e-posta adresin yeterli.',
     reason:'Ne üzerine konuşalım?', choose:'Bir konu seç', project:'Proje / iş birliği', role:'İş fırsatı', hello:'Tanışma / diğer',
     message:'Aklındaki fikir', messageHint:'Ne yapmak istiyorsun? Hedefini, kapsamını ve varsa zaman planını kısaca paylaş.',
     privacy:'İletişim bilgilerini yalnızca mesajına dönüş yapmak için istiyorum.',
@@ -33,11 +33,11 @@ export function ContactForm({locale, email, deliveryAvailable,turnstileSiteKey}:
     fast:'Lütfen formu kontrol edip birkaç saniye sonra tekrar gönder.', invalid:'Form doğrulanamadı. Sayfayı yenileyip tekrar dene.',
     fields:'Lütfen işaretlenen alanları kontrol et.',refresh:'Form oturumu doğrulanamadı. Sayfayı yenileyip tekrar dene.',
     captcha:'Güvenlik doğrulamasını tamamlayıp tekrar gönder. Yazdıkların korunuyor.',captchaUnavailable:'Güvenlik kontrolüne şu anda ulaşılamıyor. Biraz sonra tekrar dene veya doğrudan e-posta ile ulaş.',
-    mail:'E-posta gönder', required:'Tüm alanlar zorunlu.',
+    mail:'E-posta gönder', required:'Telefon isteğe bağlı; diğer alanlar zorunlu.',
   } : {
     kicker:'01 / Tell me about it', title:'Leave a project note.',
     name:'Full name', nameHint:'Your first and last name', email:'Email address', emailHint:'you@yourcompany.com',
-    phone:'Phone number', phoneHint:'+44 7xxx xxx xxx', phoneHelp:'Include your country code if possible.',
+    phone:'Phone number', phoneHint:'+44 7xxx xxx xxx', phoneHelp:'Optional. Your email address is enough for a reply.',
     reason:'What brings you here?', choose:'Choose a topic', project:'Project / collaboration', role:'Job opportunity', hello:'Introduction / other',
     message:'What do you have in mind?', messageHint:'Share your idea, goals, scope and timeline, if you have one.',
     privacy:'Your contact details are requested only so I can reply to your enquiry.',
@@ -48,7 +48,7 @@ export function ContactForm({locale, email, deliveryAvailable,turnstileSiteKey}:
     invalid:'The form could not be validated. Refresh the page and try again.',
     fields:'Please check the highlighted fields.',refresh:'The form session could not be verified. Refresh the page and try again.',
     captcha:'Complete the security check and try again. Your message is preserved.',captchaUnavailable:'The security service is temporarily unavailable. Try again later or email me directly.',
-    mail:'Send an email', required:'All fields are required.',
+    mail:'Send an email', required:'Phone is optional; all other fields are required.',
   }
 
   async function submit(event:FormEvent<HTMLFormElement>) {
@@ -106,7 +106,7 @@ export function ContactForm({locale, email, deliveryAvailable,turnstileSiteKey}:
     finally {if(turnstileSiteKey){setChallengeToken('');setChallengeAttempt(previous=>previous+1)}}
   }
 
-  if (status === 'sent') return <section className="contact-form contact-success" aria-live="polite">
+  if (status === 'sent') return <section className="contact-form contact-success" aria-live="polite" tabIndex={-1} ref={node=>{node?.focus()}}>
     <span className="contact-success-mark" aria-hidden="true"><ArrowIcon direction="up-right"/></span>
     <p className="eyebrow">YKA / {tr ? 'Mesaj alındı' : 'Message received'}</p>
     <h2>{labels.sent}</h2><p>{labels.thanks}</p>
@@ -116,7 +116,7 @@ export function ContactForm({locale, email, deliveryAvailable,turnstileSiteKey}:
   const errorText = errorCode === 'rate_limited' ? labels.rate : errorCode === 'too_fast' ? labels.fast : errorCode === 'captcha_unavailable'?labels.captchaUnavailable : ['captcha_required','captcha_failed'].includes(errorCode)?labels.captcha : errorCode === 'invalid_fields' ? labels.fields : errorCode === 'refresh_required' ? labels.refresh : ['invalid','invalid_request'].includes(errorCode) ? labels.invalid : labels.error
   const fieldError=(field:ContactField)=>invalidFields.includes(field)?<small id={`contact-${field}-error`} className="contact-field-error">{fieldMessages[field]}</small>:null
   const fieldAttributes=(field:ContactField)=>({id:`contact-${field}`,'aria-invalid':invalidFields.includes(field)?true:undefined,'aria-describedby':invalidFields.includes(field)?`contact-${field}-error`:undefined})
-  return <form className="contact-form" noValidate onSubmit={submit} onFocus={() => {if (!startedAt.current) startedAt.current = Date.now()}} onInput={event=>{const name=(event.target as HTMLInputElement).name;setInvalidFields(previous=>previous.includes(name as ContactField)?previous.filter(field=>field!==name):previous)}} aria-busy={status === 'sending'}>
+  return <form className="contact-form" noValidate onSubmit={submit} onFocus={() => {if (!startedAt.current) startedAt.current = Date.now()}} onInput={event=>{setDraftLink('');const name=(event.target as HTMLInputElement).name;setInvalidFields(previous=>previous.includes(name as ContactField)?previous.filter(field=>field!==name):previous)}} aria-busy={status === 'sending'}>
     <div className="contact-form-heading"><span>{labels.kicker}</span><h2>{labels.title}</h2><p>{labels.required}</p></div>
     {!deliveryAvailable ? <p className="contact-composer-note">{tr?'Bilgilerini yaz; taslağını hazırlayıp e-posta uygulamandan gönderebilirsin.':'Fill in your details, prepare the draft, then send it from your email app.'}</p> : null}
     <label className="contact-honeypot" aria-hidden="true">Leave this field empty<input name="contact_check" tabIndex={-1} autoComplete="off" data-1p-ignore="true" data-lpignore="true"/></label>
@@ -127,10 +127,10 @@ export function ContactForm({locale, email, deliveryAvailable,turnstileSiteKey}:
         <label className="contact-field"><span>{labels.email}</span><input {...fieldAttributes('email')} name="email" type="email" aria-label={labels.email} maxLength={200} required autoComplete="email" placeholder={labels.emailHint}/>{fieldError('email')}</label>
       </div>
       <div className="contact-form-row">
-        <label className="contact-field"><span>{labels.phone}</span><input {...fieldAttributes('phone')} name="phone" type="tel" inputMode="tel" minLength={7} maxLength={30} required autoComplete="tel" placeholder={labels.phoneHint} aria-label={labels.phone} aria-describedby={`contact-phone-help${invalidFields.includes('phone')?' contact-phone-error':''}`}/><small id="contact-phone-help">{labels.phoneHelp}</small>{fieldError('phone')}</label>
+        <label className="contact-field"><span>{labels.phone}</span><input {...fieldAttributes('phone')} name="phone" type="tel" inputMode="tel" minLength={7} maxLength={30} autoComplete="tel" placeholder={labels.phoneHint} aria-label={labels.phone} aria-describedby={`contact-phone-help${invalidFields.includes('phone')?' contact-phone-error':''}`}/><small id="contact-phone-help">{labels.phoneHelp}</small>{fieldError('phone')}</label>
         <label className="contact-field"><span>{labels.reason}</span><select {...fieldAttributes('reason')} name="reason" aria-label={labels.reason} required defaultValue=""><option value="" disabled>{labels.choose}</option><option value="project">{labels.project}</option><option value="opportunity">{labels.role}</option><option value="other">{labels.hello}</option></select>{fieldError('reason')}</label>
       </div>
-      <label className="contact-field"><span>{labels.message}</span><textarea {...fieldAttributes('message')} name="message" aria-label={labels.message} minLength={20} maxLength={4000} required rows={4} placeholder={labels.messageHint}/>{fieldError('message')}</label>
+      <label className="contact-field"><span>{labels.message}</span><textarea {...fieldAttributes('message')} name="message" aria-label={labels.message} aria-describedby={`contact-message-help${invalidFields.includes('message')?' contact-message-error':''}`} minLength={20} maxLength={4000} required rows={4} placeholder={labels.messageHint}/><small id="contact-message-help">{tr?'20–4000 karakter.':'20–4000 characters.'}</small>{fieldError('message')}</label>
     </fieldset>
     {deliveryAvailable&&turnstileSiteKey?<TurnstileWidget key={challengeAttempt} siteKey={turnstileSiteKey} locale={locale} onToken={setChallengeToken}/>:null}
     <div className="contact-form-footer"><p>{labels.privacy} <Link href={`/${locale}/privacy`}>{tr ? 'KVKK aydınlatma metni' : 'Privacy notice'}</Link>. {tr ? 'Bu form pazarlama izni değildir.' : 'This form is not marketing consent.'}</p><button className="contact-submit" disabled={status === 'sending'||Boolean(deliveryAvailable&&turnstileSiteKey&&!challengeToken)}>{status === 'sending' ? labels.sending : deliveryAvailable?labels.send:tr?'E-posta taslağını hazırla':'Prepare email draft'}<span aria-hidden="true"><ArrowIcon direction="up-right"/></span></button></div>

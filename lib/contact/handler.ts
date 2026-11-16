@@ -4,7 +4,7 @@ import {contactSchema,contactErrorFields,type ContactField} from './schema.ts'
 import {turnstileConfiguration,verifyTurnstile} from './turnstile.ts'
 export {contactSchema} from './schema.ts'
 
-type Config = {apiKey?:string; from?:string; siteUrl?:string;turnstileSiteKey?:string;turnstileSecretKey?:string}
+type Config = {apiKey?:string; from?:string; siteUrl?:string;turnstileSiteKey?:string;turnstileSecretKey?:string;gatewaySecret?:string;requireSecureDelivery?:boolean}
 type RpcResult = {data:unknown; error:{message:string}|null}
 type Dependencies = {config:Config; save:(args:Record<string,string|null>)=>PromiseLike<RpcResult>; send?:typeof fetch;verify?:typeof fetch}
 
@@ -12,6 +12,11 @@ export function contactEmailConfigured(config:Config) {
   const from = config.from?.trim() || ''
   const address = from.match(/<([^<>]+)>$/)?.[1] || from
   return Boolean(config.apiKey?.trim() && !/[\r\n]/.test(from) && z.email().safeParse(address).success)
+}
+
+export function contactDeliveryConfigured(config:Config) {
+  return contactEmailConfigured(config)&&/^[a-f0-9]{64}$/.test(config.gatewaySecret?.trim()||'')&&
+    turnstileConfiguration({siteKey:config.turnstileSiteKey,secretKey:config.turnstileSecretKey})==='required'
 }
 
 function reply(code:string, status:number,fields?:ContactField[]) {
@@ -55,7 +60,7 @@ export async function handleContact(request:Request, {config,save,send=fetch,ver
   const data = parsed.data
   const elapsed = Date.now() - data.startedAt
   if (elapsed < 2500 || elapsed > 86400000) return reply('too_fast',400)
-  if (!contactEmailConfigured(config)) return reply('unavailable',503)
+  if (!contactEmailConfigured(config)||(config.requireSecureDelivery&&!contactDeliveryConfigured(config))) return reply('unavailable',503)
   const protection=turnstileConfiguration({siteKey:config.turnstileSiteKey,secretKey:config.turnstileSecretKey})
   if (protection==='incomplete') return reply('unavailable',503)
   if (protection==='required') {
@@ -68,18 +73,20 @@ export async function handleContact(request:Request, {config,save,send=fetch,ver
   // Cloudflare supplies this verified client address; prefer it to a forwarded chain.
   const ip = request.headers.get('cf-connecting-ip')?.trim() || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
   const userAgent = (request.headers.get('user-agent') || '').slice(0,500)
-  const fingerprint = createHash('sha256').update(`${ip}|${userAgent}`).digest('hex')
+  // A bot must not reset its per-address limit merely by changing User-Agent.
+  const fingerprint = createHash('sha256').update(ip).digest('hex')
   let saved:RpcResult
   try {
-    saved = await save({p_name:data.name,p_email:data.email,p_phone:data.phone,p_reason:data.reason,p_message:data.message,
+    saved = await save({p_name:data.name,p_email:data.email,p_phone:data.phone||null,p_reason:data.reason,p_message:data.message,
       p_fingerprint:fingerprint,p_user_agent:userAgent,p_request_id:data.requestId})
   } catch {return reply('unavailable',503)}
   if (saved.error) return reply(saved.error.message.includes('Rate limit') ? 'rate_limited' : 'unavailable', saved.error.message.includes('Rate limit') ? 429 : 503)
   if (!z.uuid().safeParse(saved.data).success) return reply('unavailable',503)
 
   const reason = {project:'Proje / iş birliği',opportunity:'İş fırsatı',other:'Tanışma / diğer'}[data.reason]
-  const text = `YKA — Yeni iletişim mesajı\n\nAd soyad: ${data.name}\nE-posta: ${data.email}\nTelefon: ${data.phone}\nKonu: ${reason}\n\n${data.message}\n\nKayıt: ${saved.data}`
-  const html = `<div style="background:#f5f4ef;padding:32px;font-family:Arial,sans-serif;color:#19221b"><div style="max-width:600px;margin:auto"><p style="color:#435f3d;font-weight:bold;letter-spacing:2px">YKA / İLETİŞİM</p><h1 style="font-size:26px">Yeni bir mesajın var.</h1><p><b>Ad soyad:</b> ${escapeHtml(data.name)}<br><b>E-posta:</b> ${escapeHtml(data.email)}<br><b>Telefon:</b> ${escapeHtml(data.phone)}<br><b>Konu:</b> ${reason}</p><div style="padding:24px;background:#fcfbf7;border:1px solid #d6d8cd;white-space:pre-wrap;line-height:1.7">${escapeHtml(data.message)}</div><p style="font-size:12px;color:#686e64">Bu e-postayı yanıtlayarak doğrudan ziyaretçiye dönüş yapabilirsin.<br>Kayıt: ${saved.data}</p></div></div>`
+  const phone=data.phone||'Belirtilmedi'
+  const text = `YKA — Yeni iletişim mesajı\n\nAd soyad: ${data.name}\nE-posta: ${data.email}\nTelefon: ${phone}\nKonu: ${reason}\n\n${data.message}\n\nKayıt: ${saved.data}`
+  const html = `<div style="background:#f5f4ef;padding:32px;font-family:Arial,sans-serif;color:#19221b"><div style="max-width:600px;margin:auto"><p style="color:#435f3d;font-weight:bold;letter-spacing:2px">YKA / İLETİŞİM</p><h1 style="font-size:26px">Yeni bir mesajın var.</h1><p><b>Ad soyad:</b> ${escapeHtml(data.name)}<br><b>E-posta:</b> ${escapeHtml(data.email)}<br><b>Telefon:</b> ${escapeHtml(phone)}<br><b>Konu:</b> ${reason}</p><div style="padding:24px;background:#fcfbf7;border:1px solid #d6d8cd;white-space:pre-wrap;line-height:1.7">${escapeHtml(data.message)}</div><p style="font-size:12px;color:#686e64">Bu e-postayı yanıtlayarak doğrudan ziyaretçiye dönüş yapabilirsin.<br>Kayıt: ${saved.data}</p></div></div>`
   try {
     const response = await send('https://api.resend.com/emails', {
       method:'POST',signal:AbortSignal.timeout(12000),

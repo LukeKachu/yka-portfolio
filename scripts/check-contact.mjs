@@ -5,9 +5,12 @@ import {turnstileConfiguration} from '../lib/contact/turnstile.ts'
 // Read-only preflight. Never prints configuration values or sends an email.
 const config = {apiKey:process.env.RESEND_API_KEY,from:process.env.CONTACT_FROM_EMAIL}
 let ready = true
+const gatewayReady=/^[a-f0-9]{64}$/.test(process.env.CONTACT_GATEWAY_SECRET?.trim()||'')
+console.log(`CONTACT_GATEWAY_SECRET: ${gatewayReady?'configured (value hidden)':'MISSING / INVALID (follow docs/contact-gateway-rollout.md)'}`)
+if(!gatewayReady)ready=false
 const protection=turnstileConfiguration({siteKey:process.env.TURNSTILE_SITE_KEY,secretKey:process.env.TURNSTILE_SECRET_KEY})
 console.log(`Turnstile protection: ${protection==='required'?'CONFIGURED (server verification required; live challenge not tested)':protection==='incomplete'?'INCOMPLETE (both runtime keys are required)':'NOT ENABLED (existing anti-spam checks remain)'}`)
-if(protection==='incomplete')ready=false
+if(protection!=='required')ready=false
 for (const [name,present] of [['RESEND_API_KEY',Boolean(config.apiKey?.trim())],['CONTACT_FROM_EMAIL',Boolean(config.from?.trim())]]) {
   console.log(`${name}: ${present ? 'configured (value hidden)' : 'MISSING'}`)
 }
@@ -30,4 +33,5 @@ if (url && key) {
   } catch {console.log('Contact database: UNREACHABLE'); ready=false}
 } else {console.log('Supabase public connection: NOT CONFIGURED'); ready=false}
 console.log('Live email delivery: NOT TESTED by this read-only check.')
+console.log('Database gateway enforcement: run supabase/diagnostics/check_contact_gateway.sql in SQL Editor; this check does not certify migration activation.')
 if (!ready) process.exitCode=1

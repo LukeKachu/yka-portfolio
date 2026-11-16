@@ -3,7 +3,7 @@ import {notFound} from 'next/navigation'
 import {isLocale} from '../content'
 import {getSettings} from '@/lib/data/public'
 import {ContactForm} from '@/components/public/contact-form'
-import {contactEmailConfigured} from '@/lib/contact/handler'
+import {contactDeliveryConfigured} from '@/lib/contact/handler'
 import {localizedPageMetadata} from '@/lib/seo/metadata'
 import {turnstileConfiguration} from '@/lib/contact/turnstile'
 
@@ -20,7 +20,7 @@ export default async function ContactPage({params}:{params:Promise<{locale:strin
   const tr = locale === 'tr'
   const email = 'yusufkerimaltay77@gmail.com'
   const protection=turnstileConfiguration({siteKey:process.env.TURNSTILE_SITE_KEY,secretKey:process.env.TURNSTILE_SECRET_KEY})
-  const deliveryAvailable = contactEmailConfigured({apiKey:process.env.RESEND_API_KEY,from:process.env.CONTACT_FROM_EMAIL})&&protection!=='incomplete'
+  const deliveryAvailable = contactDeliveryConfigured({apiKey:process.env.RESEND_API_KEY,from:process.env.CONTACT_FROM_EMAIL,gatewaySecret:process.env.CONTACT_GATEWAY_SECRET,turnstileSiteKey:process.env.TURNSTILE_SITE_KEY,turnstileSecretKey:process.env.TURNSTILE_SECRET_KEY})
   // Only the public widget key crosses the Server/Client boundary, never the secret.
   const turnstileSiteKey=protection==='required'?process.env.TURNSTILE_SITE_KEY?.trim():undefined
   return <main className="contact-page">

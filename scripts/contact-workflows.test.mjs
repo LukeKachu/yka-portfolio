@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {readFile} from 'node:fs/promises'
 import test from 'node:test'
 import {PGlite} from '@electric-sql/pglite'
-import {contactEmailConfigured, contactSchema, handleContact} from '../lib/contact/handler.ts'
+import {contactEmailConfigured, contactDeliveryConfigured, contactSchema, handleContact} from '../lib/contact/handler.ts'
 import {contactMailto} from '../lib/contact/mailto.ts'
 import {createHash} from 'node:crypto'
 
@@ -32,10 +32,10 @@ test('contact config requires a real configuration and a valid sender, never a f
   assert.equal(contactEmailConfigured(config),true)
 })
 
-test('phone validation accepts international formatting but rejects missing, letters and invalid digit lengths', () => {
+test('phone is optional; supplied numbers still require valid formatting and digit lengths', () => {
   const base = {name:'A Person',email:'person@example.com',reason:'other',message:'An ordinary message longer than twenty characters.',website:'',startedAt:Date.now(),requestId:id}
-  for (const phone of ['+90 (555) 123 45 67','+44 7700 900123','020 1234 5678']) assert.equal(contactSchema.safeParse({...base,phone}).success,true)
-  for (const phone of [undefined,'','call me','123456','1234567890123456','++90 555 1234567']) assert.equal(contactSchema.safeParse({...base,phone}).success,false)
+  for (const phone of [undefined,null,'','   ','+90 (555) 123 45 67','+44 7700 900123','020 1234 5678']) assert.equal(contactSchema.safeParse({...base,phone}).success,true)
+  for (const phone of ['call me','123456','1234567890123456','++90 555 1234567']) assert.equal(contactSchema.safeParse({...base,phone}).success,false)
 })
 
 test('unconfigured form does not write to the database or claim email success', async () => {
@@ -63,7 +63,7 @@ test('pasted phone-number spaces normalize consistently without allowing letters
 
 test('invalid, cross-origin, honeypot, timestamp and oversized requests are rejected before any writes', async () => {
   const dependencies = {config,save:() => assert.fail('must not save')}
-  for (const req of [request({phone:''}),request({website:'bot.example'}),request({startedAt:'0'}),request({startedAt:String(Date.now()+60000)}),request({message:'x'.repeat(33000)}),request({},{origin:'https://evil.example'}),new Request('http://localhost:3000/api/contact',{method:'POST',headers:{origin:'http://localhost:3000','Content-Type':'application/json'},body:'{}'})]) {
+  for (const req of [request({phone:'invalid'}),request({website:'bot.example'}),request({startedAt:'0'}),request({startedAt:String(Date.now()+60000)}),request({message:'x'.repeat(33000)}),request({},{origin:'https://evil.example'}),new Request('http://localhost:3000/api/contact',{method:'POST',headers:{origin:'http://localhost:3000','Content-Type':'application/json'},body:'{}'})]) {
     const response = await handleContact(req,dependencies)
     assert.ok([400,403].includes(response.status))
   }
@@ -87,7 +87,28 @@ test('Cloudflare rate-limit fingerprints use its client address rather than a su
     send:async()=>Response.json({id}),
   })
   assert.equal(response.status,200)
-  assert.equal(fingerprint,createHash('sha256').update('192.0.2.10|QA').digest('hex'))
+  assert.equal(fingerprint,createHash('sha256').update('192.0.2.10').digest('hex'))
+})
+
+test('secure production delivery fails closed if any gateway or Turnstile setting is missing',async()=>{
+  const secure={...config,requireSecureDelivery:true,gatewaySecret:'a'.repeat(64),turnstileSiteKey:'isolated-site',turnstileSecretKey:'isolated-secret'}
+  assert.equal(contactDeliveryConfigured(secure),true)
+  for(const name of ['gatewaySecret','turnstileSiteKey','turnstileSecretKey','apiKey','from']) {
+    const missing={...secure,[name]:undefined}
+    assert.equal(contactDeliveryConfigured(missing),false)
+    const result=await handleContact(request(),{config:missing,save:()=>assert.fail('must not save'),send:()=>assert.fail('must not send'),verify:()=>assert.fail('must not verify')})
+    assert.equal(result.status,503)
+  }
+})
+
+test('blank phone is stored as null and clearly omitted in mail drafts and email',async()=>{
+  const response=await handleContact(request({phone:'  '}),{config,save:async args=>{assert.equal(args.p_phone,null);return {data:id,error:null}},send:async(_,options)=>{
+    assert.match(JSON.parse(options.body).text,/Telefon: Belirtilmedi/)
+    return Response.json({id})
+  }})
+  assert.equal(response.status,200)
+  const draft=contactMailto('owner@example.com',{name:'QA',email:'qa@example.com',phone:'',reason:'other',message:'An ordinary enquiry longer than twenty characters.'},'tr')
+  assert.doesNotMatch(new URL(draft).searchParams.get('body'),/Telefon:/)
 })
 
 test('email contains phone, safe HTML and correct Reply-To; retry uses the same idempotency key', async () => {

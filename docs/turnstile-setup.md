@@ -31,11 +31,13 @@ rate limits remain enabled. It does not guarantee that all spam is eliminated.
 6. Publish the updated code through the existing GitHub/Cloudflare workflow. The
    code alone does not activate a widget; keys alone do not update old code.
 
-Both absent keys preserve the working form and its existing protections during
-setup. **Once both are configured, every contact API submission requires successful
+The November secure gateway update also requires `CONTACT_GATEWAY_SECRET`; see
+[staged migration/deployment instructions](contact-gateway-rollout.md). Missing
+protection configuration offers a mail-app draft rather than unguarded delivery.
+**Every server-delivered contact API submission requires successful
 server-side Siteverify validation.** A missing/invalid/expired/reused token, action
 mismatch or hostname mismatch cannot create a database record or send an email.
-Partial configuration fails closed: API submissions are unavailable and the public
+Missing or partial configuration fails closed: API submissions are unavailable and the public
 form offers the honest mail-client draft fallback. A verification service outage
 also fails closed, preserves form text and never falls back to unchecked API sending.
 
@@ -66,16 +68,13 @@ from optional theme storage and external video display preferences.
 
 ## Scope and remaining abuse surface
 
-This is protection for the Next.js `/api/contact` path, **not a site-wide WAF rule**.
-The existing Supabase `submit_contact_message` / `_v2` RPC functions remain callable
-by the anonymous role under their current schema, with their existing validation
-and rate limits. A direct Supabase RPC caller does not pass through this Next.js
-Turnstile check. It cannot send email through Resend, but this integration alone
-must not be presented as complete prevention of direct database-inbox spam.
-Closing that path requires a separately reviewed database write-boundary change;
-no auth/RLS changes, new database secrets or service-role credentials are introduced
-by this widget integration. Public-page crawler controls are also a separate
-Cloudflare WAF/Bot Management configuration, not a reason to challenge every viewer.
+This is contact protection, **not a site-wide WAF rule**. The old Supabase v1/v2
+bypass remains open UNTIL migration 009 is activated after migration 008, the
+scoped server secret and a successful new-path delivery test. After activation,
+legacy RPC execution/direct inserts are denied and v3 requires the server-only
+gateway key. No service-role credential or admin/Auth change is required. Check
+the read-only gateway diagnostics rather than assuming a deploy closes DB grants.
+Public-page crawler controls are a separate Cloudflare WAF configuration.
 
 References: [widget creation](https://developers.cloudflare.com/turnstile/get-started/widget-management/dashboard/),
 [server verification](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/),
